@@ -52,13 +52,19 @@ class App extends Component<{}, State> {
                   <label>
                     Array
                     <ArrayField {...links.a}>
-                      {links => {
-                        return links.map(link => (
-                          <div>
-                            <StringField {...link} />
-                          </div>
-                        ));
-                      }}
+                      {(links, {addField, removeField}) => (
+                        <React.Fragment>
+                          {links.map((link, i) => (
+                            <div>
+                              <StringField {...link} />
+                              <button onClick={() => removeField(i)}>x</button>
+                            </div>
+                          ))}
+                          <button onClick={() => addField("zach")}>
+                            Add zach
+                          </button>
+                        </React.Fragment>
+                      )}
                     </ArrayField>
                   </label>
                 </div>
