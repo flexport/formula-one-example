@@ -6,7 +6,7 @@ import type {ChangeFn, $Map, ToError, FieldLink} from "./types";
 
 type ToFieldLink = <T>(T) => FieldLink<T>;
 
-type Links<T> = $Call<$Map<ToFieldLink>, T>;
+type Links<T> = $ObjMap<T, ToFieldLink>;
 type Errors<T> = $Call<$Map<ToError>, T>;
 
 type Props<T: {}> = {|

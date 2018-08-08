@@ -5,8 +5,11 @@ export type ChangeFn<T> = T => void;
 export type $Map<F: Function> = (<X: {}>(X) => $ObjMap<X, $Map<F>>) &
   (<E, X: Array<E>>(X) => Array<$Call<F, E>>) &
   (<X: number>(X) => $Call<F, X>) &
-  (<X: string>(X) => $Call<F, X>) &
-  (<X>(X) => $Call<F, X>);
+  (<X: string>(X) => $Call<F, X>);
+//  &
+// (<X>(X) => $Call<F, X>);
+
+export type ArrayMap<F, T: Array<*>> = Array<$Call<F, $ElementType<T, number>>>;
 
 // TODO(zach): Maybe this should be an array of strings (or a non-empty array of strings?)
 export type Error = string | null;
