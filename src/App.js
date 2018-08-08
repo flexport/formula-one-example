@@ -1,18 +1,45 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+// @flow
+import React, {Component} from "react";
 
-class App extends Component {
+import ObjectField from "./formula-two/ObjectField";
+import NumberField from "./formula-two/inputs/NumberField";
+import StringField from "./formula-two/inputs/StringField";
+
+class App extends Component<{}, {value: {n: number, s: string}}> {
+  state = {
+    value: {
+      n: 0,
+      s: "",
+    },
+  };
+
+  handleChange = (newValue: {n: number, s: string}) => {
+    this.setState({value: newValue});
+  };
+
   render() {
     return (
       <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Welcome to React</h1>
-        </header>
-        <p className="App-intro">
-          To get started, edit <code>src/App.js</code> and save to reload.
-        </p>
+        <ObjectField value={this.state.value} onChange={this.handleChange}>
+          {links => {
+            return (
+              <React.Fragment>
+                <div>
+                  <label>
+                    Number
+                    <NumberField {...links.n} />
+                  </label>
+                </div>
+                <div>
+                  <label>
+                    String
+                    <StringField {...links.s} />
+                  </label>
+                </div>
+              </React.Fragment>
+            );
+          }}
+        </ObjectField>
       </div>
     );
   }
