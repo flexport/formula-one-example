@@ -1,20 +1,12 @@
 // @flow
 
-export type ChangeFn<T> = T => void;
-
-export type $Map<F: Function> = (<X: {}>(X) => $ObjMap<X, $Map<F>>) &
-  (<E, X: Array<E>>(X) => Array<$Call<F, E>>) &
-  (<X: number>(X) => $Call<F, X>) &
-  (<X: string>(X) => $Call<F, X>);
-//  &
-// (<X>(X) => $Call<F, X>);
-
-export type ArrayMap<F, T: Array<*>> = Array<$Call<F, $ElementType<T, number>>>;
+import type {Tree} from "./Tree";
 
 // TODO(zach): Maybe this should be an array of strings (or a non-empty array of strings?)
-export type Error = string | null;
-export type ToError = <T>(T) => Error;
+export type Err = Array<string>;
+export type ToError = <T>(T) => Err;
 
+// Every field keeps its own meta, not the meta of its children
 export type MetaField = {
   touched: boolean, // blurred
   changed: boolean,
@@ -27,8 +19,44 @@ export type MetaForm = {
   submitted: boolean,
 };
 
+export type OnChange<T> = (T, Errors) => void;
+export type OnBlur = () => void;
+
 export type FieldLink<T> = {|
   value: T,
-  onChange: ChangeFn<T>,
-  // meta: MetaField,
+  errors: Errors,
+  onChange: OnChange<T>,
+  onBlur: OnBlur,
 |};
+
+export type FeedbackStrategy =
+  | "Always"
+  | "OnFirstBlur"
+  | "OnFirstChange"
+  | "OnFirstSuccess"
+  | "OnFirstSuccessOrFirstBlur"
+  | "OnSubmit";
+
+type $$Map<F: Function> = (<X: {}>(x: X) => $ObjMap<X, $$Map<F>>) &
+  (<E>(x: Array<E>) => Array<$Call<$$Map<F>, E>>) &
+  (<X>(x: number) => $Call<F, X>) &
+  (<X>(x: string) => $Call<F, X>);
+
+export type ObjectNode<T> = {
+  type: "object",
+  data: T,
+  children: {[string]: Tree<T>},
+};
+export type ArrayNode<T> = {
+  type: "array",
+  data: T,
+  children: Array<Tree<T>>,
+};
+
+// Actually mapping isn't working. Instead do a lot of runtime checks to make
+// sure the shape is right
+export type Errors = Tree<Err>;
+export type ObjErrors = ObjectNode<Err>;
+export type ArrErrors = ArrayNode<Err>;
+
+export type Validation<T> = T => Err;
