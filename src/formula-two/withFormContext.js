@@ -1,0 +1,37 @@
+// @flow
+
+import * as React from "react";
+import {FormContext, type FormContextPayload} from "./Form";
+
+export default function withFormContext<
+  InnerProps: {formContext: FormContextPayload}
+>(Component: React.ComponentType<InnerProps>) {
+  class WithFormContext extends React.Component<
+    {forwardedRef: React.Ref<typeof Component>} & $Diff<
+      InnerProps,
+      {formContext: FormContextPayload}
+    >
+  > {
+    render() {
+      const {forwardedRef, ...otherProps} = this.props;
+      return (
+        <FormContext.Consumer>
+          {formContext => (
+            // $FlowFixMe looks right to me
+            <Component
+              {...otherProps}
+              formContext={formContext}
+              // $FlowFixMe I don't understand why you are complaining, Flow
+              ref={forwardedRef}
+            />
+          )}
+        </FormContext.Consumer>
+      );
+    }
+  }
+
+  // $FlowFixMe $FlowBug(0.79.1)
+  return React.forwardRef((props, ref) => {
+    return <WithFormContext {...props} forwardedRef={ref} />;
+  });
+}

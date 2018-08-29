@@ -1,5 +1,6 @@
 // @flow
 
+import * as React from "react";
 import type {Tree} from "./Tree";
 
 // TODO(zach): Maybe this should be an array of strings (or a non-empty array of strings?)
@@ -22,11 +23,19 @@ export type MetaForm = {
 export type OnChange<T> = (T, Errors) => void;
 export type OnBlur = () => void;
 
-export type FieldLink<T> = {|
+interface ValidatingComponent<P, S> extends React.Component<P, S> {
+  validate(): Err;
+}
+export type FieldLinkProps<T> = {|
   value: T,
   errors: Errors,
   onChange: OnChange<T>,
   onBlur: OnBlur,
+|};
+export type FieldLink<T> = {|
+  ...FieldLinkProps<T>,
+  key: React.Key,
+  ref: React.Ref<ValidatingComponent<any, any>>,
 |};
 
 export type FeedbackStrategy =

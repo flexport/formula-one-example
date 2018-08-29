@@ -5,7 +5,8 @@ import * as React from "react";
 import type {FieldLink, Errors, Validation, ObjErrors} from "./types";
 import {setEq} from "./utils/set";
 import type {MetaField} from "./types";
-import {FormContext} from "./Form";
+import {type FormContextPayload} from "./Form";
+import withFormContext from "./withFormContext";
 import invariant from "./utils/invariant";
 
 type ToFieldLink = <T>(T) => FieldLink<T>;
@@ -17,8 +18,8 @@ type ToChildError = <T>(T) => ChildError;
 type ChildrenErrors<T> = $ObjMap<T, ToChildError>;
 
 type Props<T: {}> = {|
-  ...FieldLink<T>,
-  shouldShowError: MetaField => boolean,
+  ...$Exact<FieldLink<T>>,
+  formContext: FormContextPayload,
   validation: Validation<T>,
   children: (links: Links<T>) => React.Node,
 |};
@@ -56,7 +57,7 @@ function makeLinks<T: {}>(
   }, {});
 }
 
-class ObjectFieldInner<T: {}> extends React.Component<Props<T>, State> {
+class ObjectField<T: {}> extends React.Component<Props<T>, State> {
   static defaultProps = {
     validation: () => [],
   };
@@ -137,19 +138,4 @@ class ObjectFieldInner<T: {}> extends React.Component<Props<T>, State> {
   }
 }
 
-export default class ObjectField<T: {}> extends React.Component<
-  $Diff<
-    React.ElementConfig<typeof ObjectFieldInner>,
-    {shouldShowError: MetaField => boolean}
-  >
-> {
-  render() {
-    return (
-      <FormContext.Consumer>
-        {({shouldShowError}) => (
-          <ObjectFieldInner {...this.props} shouldShowError={shouldShowError} />
-        )}
-      </FormContext.Consumer>
-    );
-  }
-}
+export default withFormContext(ObjectField);

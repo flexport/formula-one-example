@@ -1,14 +1,15 @@
 // @flow
 
 import * as React from "react";
-import {FormContext} from "../Form";
+import {type FormContextPayload} from "../Form";
 import type {MetaField, FieldLink, Validation} from "../types";
 import {leaf} from "../Tree";
+import withFormContext from "../withFormContext";
 
 type Props = {|
   ...FieldLink<number>,
   validation: Validation<number>,
-  shouldShowError: MetaField => boolean,
+  formContext: FormContextPayload,
 |};
 
 type State = {
@@ -16,7 +17,7 @@ type State = {
 };
 
 // A dead simple number field
-class NumberFieldInner extends React.Component<Props, State> {
+class NumberField extends React.Component<Props, State> {
   static defaultProps = {
     validation: () => [],
   };
@@ -36,7 +37,11 @@ class NumberFieldInner extends React.Component<Props, State> {
   };
 
   render() {
-    const {shouldShowError, errors, value} = this.props;
+    const {
+      formContext: {shouldShowError},
+      errors,
+      value,
+    } = this.props;
     const showError =
       shouldShowError(this.state.meta) && errors.data.length > 0;
     return (
@@ -54,16 +59,4 @@ class NumberFieldInner extends React.Component<Props, State> {
   }
 }
 
-export default class NumberField extends React.Component<
-  $Diff<Props, {shouldShowError: MetaField => boolean}>
-> {
-  render() {
-    return (
-      <FormContext.Consumer>
-        {({shouldShowError}) => (
-          <NumberFieldInner {...this.props} shouldShowError={shouldShowError} />
-        )}
-      </FormContext.Consumer>
-    );
-  }
-}
+export default withFormContext(NumberField);

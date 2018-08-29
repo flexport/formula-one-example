@@ -1,14 +1,15 @@
 // @flow
 
 import * as React from "react";
-import {FormContext} from "../Form";
+import {type FormContextPayload} from "../Form";
 import type {MetaField, FieldLink, Validation} from "../types";
 import {leaf} from "../Tree";
+import withFormContext from "../withFormContext";
 
 type Props = {|
   ...FieldLink<string>,
   validation: Validation<string>,
-  shouldShowError: MetaField => boolean,
+  formContext: FormContextPayload,
 |};
 
 type State = {
@@ -16,7 +17,7 @@ type State = {
 };
 
 // A dead simple string field
-class StringFieldInner extends React.Component<Props, State> {
+class StringField extends React.Component<Props, State> {
   static defaultProps = {
     validation: () => [],
   };
@@ -53,7 +54,11 @@ class StringFieldInner extends React.Component<Props, State> {
   };
 
   render() {
-    const {shouldShowError, errors, value} = this.props;
+    const {
+      formContext: {shouldShowError},
+      errors,
+      value,
+    } = this.props;
     const showError =
       shouldShowError(this.state.meta) && errors.data.length > 0;
     return (
@@ -72,16 +77,4 @@ class StringFieldInner extends React.Component<Props, State> {
   }
 }
 
-export default class StringField extends React.Component<
-  $Diff<Props, {shouldShowError: MetaField => boolean}>
-> {
-  render() {
-    return (
-      <FormContext.Consumer>
-        {({shouldShowError}) => (
-          <StringFieldInner {...this.props} shouldShowError={shouldShowError} />
-        )}
-      </FormContext.Consumer>
-    );
-  }
-}
+export default withFormContext(StringField);

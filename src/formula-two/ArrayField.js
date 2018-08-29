@@ -5,14 +5,16 @@ import * as React from "react";
 import type {
   Errors,
   FieldLink,
+  FieldLinkProps,
   MetaField,
   Validation,
   ArrayNode,
   Err,
 } from "./types";
 import {removeAt, replaceAt, moveFromTo} from "./utils/array";
-import {FormContext} from "./Form";
+import {type FormContextPayload, FormContext} from "./Form";
 import invariant from "./utils/invariant";
+import withFormContext from "./withFormContext";
 
 type ToFieldLink = <T>(T) => FieldLink<T>;
 type Links<E> = Array<$Call<ToFieldLink, E>>;
@@ -20,8 +22,8 @@ type Links<E> = Array<$Call<ToFieldLink, E>>;
 type ChildrenErrors = Array<Errors>;
 
 type Props<E> = {|
-  ...FieldLink<Array<E>>,
-  shouldShowError: MetaField => boolean,
+  ...FieldLinkProps<Array<E>>,
+  formContext: FormContextPayload,
   validation: Validation<Array<E>>,
   children: (
     links: Links<E>,
@@ -57,7 +59,7 @@ function makeLinks<E>(
   }));
 }
 
-class ArrayFieldInner<E> extends React.Component<Props<E>, State> {
+class ArrayField<E> extends React.Component<Props<E>, State> {
   static defaultProps = {
     validation: () => [],
   };
@@ -173,16 +175,4 @@ class ArrayFieldInner<E> extends React.Component<Props<E>, State> {
   }
 }
 
-export default class ArrayField<E> extends React.Component<
-  $Diff<Props<E>, {shouldShowError: MetaField => boolean}>
-> {
-  render() {
-    return (
-      <FormContext.Consumer>
-        {({shouldShowError}) => (
-          <ArrayFieldInner {...this.props} shouldShowError={shouldShowError} />
-        )}
-      </FormContext.Consumer>
-    );
-  }
-}
+export default withFormContext(ArrayField);
