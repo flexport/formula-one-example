@@ -7,7 +7,7 @@ import ArrayField from "./formula-two/ArrayField";
 import NumberField from "./formula-two/inputs/NumberField";
 import StringField from "./formula-two/inputs/StringField";
 
-import type {Errors, FieldLink} from "./formula-two/types";
+import {treeFromValue} from "./formula-two/types";
 
 function checkString(s: string): Array<string> {
   if (s === "") {
@@ -18,21 +18,21 @@ function checkString(s: string): Array<string> {
   }
   return [];
 }
-function makeErrors(x: FormState): Errors {
-  return {
-    type: "object",
-    data: [],
-    children: {
-      n: {type: "leaf", data: []},
-      s: {type: "leaf", data: []},
-      a: {
-        type: "array",
-        data: [],
-        children: x.a.map(c => ({type: "leaf", data: [] /*checkString(c)*/})),
-      },
-    },
-  };
-}
+// function makeErrors(x: FormState): Errors {
+//   return {
+//     type: "object",
+//     data: [],
+//     children: {
+//       n: {type: "leaf", data: []},
+//       s: {type: "leaf", data: []},
+//       a: {
+//         type: "array",
+//         data: [],
+//         children: x.a.map(c => ({type: "leaf", data: [] /*checkString(c)*/})),
+//       },
+//     },
+//   };
+// }
 
 type FormState = {
   n: number,
@@ -42,7 +42,7 @@ type FormState = {
 
 type State = {
   value: FormState,
-  error: Errors,
+  // error: Errors,
 };
 
 class App extends Component<{}, State> {
@@ -52,29 +52,28 @@ class App extends Component<{}, State> {
       s: "",
       a: ["hello", "world", "!!!"],
     },
-    error: makeErrors({
-      n: 0,
-      s: "",
-      a: ["hello", "world", "!!!"],
-    }),
+    // error: makeErrors({
+    //   n: 0,
+    //   s: "",
+    //   a: ["hello", "world", "!!!"],
+    // }),
   };
 
   render() {
     return (
       <Form
-        serverErrors={makeErrors(this.state.value)}
+        serverErrors={null}
         initialValue={this.state.value}
         feedbackStrategy="OnFirstBlur"
         onSubmit={value => {
           console.log("SUBMITTED", value);
         }}
       >
-        {(formState, errors, onChange, onSubmit) => (
+        {(formState, onChange, onBlur, onSubmit) => (
           <ObjectField
-            value={formState}
-            errors={errors}
+            formState={formState}
             onChange={onChange}
-            onBlur={() => {}}
+            onBlur={onBlur}
           >
             {links => {
               return (
@@ -118,7 +117,9 @@ class App extends Component<{}, State> {
                                 )}
                               </div>
                             ))}
-                            <button onClick={() => addField("zach")}>
+                            <button
+                              onClick={() => addField(links.length, "zach")}
+                            >
                               Add zach
                             </button>
                           </React.Fragment>

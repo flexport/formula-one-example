@@ -9,10 +9,9 @@ import type {
   ShapedTree,
   FormState,
   Err,
+  OnBlur,
 } from "./types";
-import {cleanMeta, cleanErrors} from "./types";
-import {zipWith} from "./utils/array";
-import {zipWith as objZipWith} from "./utils/object";
+import {treeFromValue, cleanMeta, cleanErrors} from "./types";
 import {type Tree, strictZipWith} from "./Tree";
 
 export type FormContextPayload = {
@@ -29,36 +28,6 @@ export const FormContext: React.Context<
   pristine: false,
   submitted: true,
 });
-
-// Take shape from value, data from nodeData
-function treeFromValue<T, NodeData>(
-  value: T,
-  nodeData: NodeData
-): ShapedTree<T, NodeData> {
-  if (Array.isArray(value)) {
-    return {
-      type: "array",
-      data: nodeData,
-      children: value.map(child => treeFromValue(child, nodeData)),
-    };
-  }
-
-  if (value instanceof Object) {
-    return {
-      type: "object",
-      data: nodeData,
-      children: Object.keys(value).reduce(
-        (children, k) => ({...children, [k]: newFormState(value[k])}),
-        {}
-      ),
-    };
-  }
-
-  return {
-    type: "leaf",
-    data: nodeData,
-  };
-}
 
 function newFormState<T>(value: T): FormState<T> {
   return [
@@ -79,9 +48,9 @@ function getShouldShowError(strategy: FeedbackStrategy) {
       return (meta: MetaField) => true;
     case "OnFirstBlur":
       return (meta: MetaField) => meta.touched;
+    default:
+      throw new Error("Unimplemented feedback strategy: " + strategy);
   }
-
-  throw new Error("Unimplemented feedback strategy: " + strategy);
 }
 
 function mergeErrors(
@@ -106,10 +75,12 @@ type Props<T> = {
   feedbackStrategy: FeedbackStrategy,
   onSubmit: T => void,
   // We hope this is a ShapedTree<T, ...>, but I don't think we can guarantee it
-  serverErrors: Tree<Array<string>>,
+  // We can with the write constructors (check: (T, Tree<S>) => ShapedTree<T, S>)
+  serverErrors: null | Tree<Array<string>>,
   children: (
     formState: FormState<T>,
     onChange: OnChange<FormState<T>>,
+    onBlur: OnBlur<T>,
     onSubmit: (T) => void
   ) => React.Node,
 };
@@ -139,13 +110,38 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
     this.setState({formState: newState, pristine: false});
   };
 
+  onBlur: OnBlur<T> = (
+    newTree: ShapedTree<
+      T,
+      {
+        errors: Err,
+        meta: MetaField,
+      }
+    >
+  ) => {
+    this.setState({
+      formState: [this.state.formState[0], newTree],
+    });
+  };
+
   render() {
     const {serverErrors} = this.props;
     const {formState} = this.state;
-    const mergedFormState = [
-      formState[0],
-      strictZipWith(mergeErrors, formState[1], serverErrors),
-    ];
+
+    let mergedFormState = null;
+    if (serverErrors != null) {
+      // TODO(zach): Clean this up
+      try {
+        mergedFormState = [
+          formState[0],
+          strictZipWith(mergeErrors, formState[1], serverErrors),
+        ];
+      } catch (e) {
+        mergedFormState = formState;
+      }
+    } else {
+      mergedFormState = formState;
+    }
 
     return (
       <FormContext.Provider
@@ -155,7 +151,12 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
           submitted: this.state.submitted,
         }}
       >
-        {this.props.children(mergedFormState, this.onChange, this.onSubmit)}
+        {this.props.children(
+          mergedFormState,
+          this.onChange,
+          this.onBlur,
+          this.onSubmit
+        )}
       </FormContext.Provider>
     );
   }

@@ -12,55 +12,66 @@ type Props = {|
   formContext: FormContextPayload,
 |};
 
-type State = {
-  meta: MetaField,
-};
-
 // A dead simple string field
-class StringField extends React.Component<Props, State> {
+class StringField extends React.Component<Props> {
   static defaultProps = {
     validation: () => [],
   };
 
-  state = {
-    meta: {
-      touched: false,
-      changed: false,
-      succeeded: false,
-      asyncValidationInFlight: false,
-    },
-  };
-
   handleChange = (e: SyntheticEvent<HTMLInputElement>) => {
     const newValue = e.currentTarget.value;
-
-    this.setState({
-      meta: {
-        ...this.state.meta,
-        changed: true,
-      },
-    });
-
-    this.props.onChange(newValue, leaf(this.props.validation(newValue)));
+    this.props.onChange([
+      newValue,
+      leaf({
+        errors: {
+          client: this.props.validation(newValue),
+          server: "unchecked",
+        },
+        meta: {
+          ...this.props.formState[1].data.meta,
+          changed: true,
+        },
+      }),
+    ]);
   };
 
   handleBlur = () => {
-    this.setState({
-      meta: {
-        ...this.state.meta,
-        touched: true,
-      },
-    });
+    const [value, tree] = this.props.formState;
+    const newMeta = {
+      ...tree.data.meta,
+      touched: true,
+    };
+    this.props.onBlur(
+      leaf({
+        // TODO(zach): Not sure if we should blow away server errors here
+        errors: {
+          client: this.props.validation(value),
+          server: "unchecked",
+        },
+        meta: newMeta,
+      })
+    );
   };
+
+  getErrors() {
+    const {errors} = this.props.formState[1].data;
+    let flatErrors = [];
+    if (errors.client !== "pending") {
+      flatErrors = flatErrors.concat(errors.client);
+    }
+    if (errors.server !== "unchecked") {
+      flatErrors = flatErrors.concat(errors.server);
+    }
+    return flatErrors;
+  }
 
   render() {
     const {
       formContext: {shouldShowError},
-      errors,
-      value,
+      formState: [value, tree],
     } = this.props;
     const showError =
-      shouldShowError(this.state.meta) && errors.data.length > 0;
+      shouldShowError(tree.data.meta) && this.getErrors().length > 0;
     return (
       <div style={{display: "inline-flex", flexDirection: "column"}}>
         <input
@@ -71,7 +82,7 @@ class StringField extends React.Component<Props, State> {
           value={value}
         />
         {showError &&
-          errors.data.map(e => <div style={{color: "red"}}>{e}</div>)}
+          this.getErrors().map(e => <div style={{color: "red"}}>{e}</div>)}
       </div>
     );
   }

@@ -88,6 +88,40 @@ export type Validation<T> = T => ClientErrors;
 // eslint-disable-next-line no-unused-vars
 export type ShapedTree<Shape, Data> = Tree<Data>;
 
+// Take shape from value, data from nodeData
+export function treeFromValue<T, NodeData>(
+  value: T,
+  nodeData: NodeData
+): ShapedTree<T, NodeData> {
+  if (Array.isArray(value)) {
+    return {
+      type: "array",
+      data: nodeData,
+      children: value.map(child => treeFromValue(child, nodeData)),
+    };
+  }
+
+  if (value instanceof Object) {
+    const objectValue = value;
+    return {
+      type: "object",
+      data: nodeData,
+      children: Object.keys(objectValue).reduce(
+        (children, k) => ({
+          ...children,
+          [k]: treeFromValue(objectValue[k], nodeData),
+        }),
+        {}
+      ),
+    };
+  }
+
+  return {
+    type: "leaf",
+    data: nodeData,
+  };
+}
+
 // invariant, Tree is shaped like T
 export type FormState<T> = [
   T,

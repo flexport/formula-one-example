@@ -153,7 +153,11 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
   };
 
   render() {
-    const links = makeLinks(this.props.formState, this._onChange, this._onBlur);
+    const links = makeLinks(
+      this.props.formState,
+      this._onChange,
+      this.onChildBlur
+    );
     return this.props.children(links);
   }
 }

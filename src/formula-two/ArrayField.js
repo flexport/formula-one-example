@@ -11,7 +11,7 @@ import type {
   OnChange,
   FormState,
 } from "./types";
-import {arrayChild, cleanErrors, cleanMeta} from "./types";
+import {arrayChild, cleanErrors, cleanMeta, treeFromValue} from "./types";
 import {type Tree} from "./Tree";
 import {removeAt, replaceAt, moveFromTo, insertAt} from "./utils/array";
 import {type FormContextPayload, FormContext} from "./Form";
@@ -123,10 +123,10 @@ class ArrayField<E> extends React.Component<Props<E>> {
     const [_, tree] = this.props.formState;
     invariant(
       tree.type === "array",
-      "ArrayField got a non-array tree in onChildBlur"
+      "ArrayField got a non-array tree in onChildBlur()"
     );
     const newTree = {
-      type: "object",
+      type: "array",
       data: {
         ...tree.data,
         meta: {
@@ -141,12 +141,16 @@ class ArrayField<E> extends React.Component<Props<E>> {
 
   addChildField: (number, E) => void = (index: number, childValue: E) => {
     const [oldValue, oldTree] = this.props.formState;
-    const newTODO = {
+    const cleanNode = {
       errors: cleanErrors,
       meta: cleanMeta,
     };
 
     const newValue = insertAt(index, childValue, oldValue);
+    invariant(
+      oldTree.type === "array",
+      "ArrayField got a non-array node in addChildField()"
+    );
     const newTree = {
       type: "array",
       data: {
@@ -154,49 +158,72 @@ class ArrayField<E> extends React.Component<Props<E>> {
         meta: {
           ...oldTree.data.meta,
           touched: true,
+          changed: true,
         },
       },
-      children: insertAt(index, newTODO);
-    }
-  }
+      children: insertAt(
+        index,
+        treeFromValue(childValue, cleanNode),
+        oldTree.children
+      ),
+    };
+    this.props.onChange([newValue, newTree]);
+  };
+
+  removeChildField = (index: number) => {
+    const [oldValue, oldTree] = this.props.formState;
+
+    const newValue = removeAt(index, oldValue);
+    invariant(
+      oldTree.type === "array",
+      "ArrayField got a non-array node in removeChildField()"
+    );
+    const newTree = {
+      type: "array",
+      data: {
+        ...oldTree.data,
+        meta: {
+          ...oldTree.data.meta,
+          touched: true,
+          changed: true,
+        },
+      },
+      children: removeAt(index, oldTree.children),
+    };
+    this.props.onChange([newValue, newTree]);
+  };
+
+  moveChildField = (from: number, to: number) => {
+    const [oldValue, oldTree] = this.props.formState;
+
+    const newValue = moveFromTo(from, to, oldValue);
+    invariant(
+      oldTree.type === "array",
+      "ArrayField got a non-array node in moveChildField()"
+    );
+    const newTree = {
+      type: "array",
+      data: {
+        ...oldTree.data,
+        meta: {
+          ...oldTree.data.meta,
+          touched: true,
+          changed: true,
+        },
+      },
+      children: moveFromTo(from, to, oldTree.children),
+    };
+    this.props.onChange([newValue, newTree]);
+  };
 
   render() {
-    const {value, errors, onChange} = this.props;
-    invariant(errors.type === "array", "Got a non-array node");
+    const {formState} = this.props;
 
-    const links = makeLinks(
-      value,
-      errors,
-      this._onChildrenChange,
-      this._onBlur
-    );
+    const links = makeLinks(formState, this.onChildChange, this.onChildBlur);
     return this.props.children(links, {
-      addField: newChildValue => {
-        const newValue = [...value, newChildValue];
-        // Can't really do this yet, there is no child?
-        // better to flag that we need validation in future
-        // or will validation occur on first render (does that count as a change?)
-        const newError = this.validate();
-        this._onChange(newValue, newError);
-      },
-      removeField: index => {
-        const newValue = removeAt(index, value);
-        const newError = {
-          type: "array",
-          data: this.props.validation(newValue),
-          children: removeAt(index, errors.children),
-        };
-        this._onChange(newValue, newError);
-      },
-      moveField: (oldIndex: number, newIndex: number) => {
-        const newValue = moveFromTo(oldIndex, newIndex, value);
-        const newError = {
-          type: "array",
-          data: this.props.validation(newValue),
-          children: moveFromTo(oldIndex, newIndex, errors.children),
-        };
-        this._onChange(newValue, newError);
-      },
+      addField: this.addChildField,
+      removeField: this.removeChildField,
+      moveField: this.moveChildField,
     });
   }
 }
