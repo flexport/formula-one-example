@@ -2,20 +2,23 @@
 
 import * as React from "react";
 
-import type {
-  FieldLink,
-  Validation,
-  OnChange,
-  FormState,
-  Err,
-  OnBlur,
-  MetaField,
-} from "./types";
-import {objectChild} from "./types";
-import {type Tree} from "./Tree";
+import type {FieldLink, Validation, Extras} from "./types";
 import {type FormContextPayload} from "./Form";
 import withFormContext from "./withFormContext";
 import invariant from "./utils/invariant";
+import {
+  type FormState,
+  setChanged,
+  replaceObjectChild,
+  setExtrasTouched,
+  objectChild,
+  validate,
+} from "./formState";
+import {
+  type ShapedTree,
+  mapRoot,
+  dangerouslyReplaceObjectChild,
+} from "./shapedTree";
 
 type ToFieldLink = <T>(T) => FieldLink<T>;
 type Links<T: {}> = $ObjMap<T, ToFieldLink>;
@@ -27,38 +30,17 @@ type Props<T: {}> = {|
   children: (links: Links<T>) => React.Node,
 |};
 
-function makeLinks<T: {}>(
+function makeLinks<T: {}, V>(
   formState: FormState<T>,
-  onChange: OnChange<FormState<T>>,
-  onChildBlur: (
-    string,
-    Tree<{
-      errors: Err,
-      meta: MetaField,
-    }>
-  ) => void
+  onChildChange: (string, FormState<V>) => void,
+  onChildBlur: (string, ShapedTree<V, Extras>) => void
 ): Links<T> {
-  const [value, tree] = formState;
+  const [value] = formState;
   return Object.keys(value).reduce((memo, k) => {
     const l = {
-      formState: objectChild(value[k], formState, k),
-      onChange: ([childValue, childTree]) => {
-        const newValue = {...value, [k]: childValue};
-
-        invariant(
-          formState[1].type === "object",
-          "Got a non-object node in ObjectField link onChange()"
-        );
-        // TODO(zach): Don't do this manually
-        const newTree = {
-          type: "object",
-          data: formState[1].data,
-          children: {
-            ...formState[1].children,
-            [k]: childTree,
-          },
-        };
-        onChange([newValue, newTree]);
+      formState: objectChild(k, formState),
+      onChange: childFormState => {
+        onChildChange(k, childFormState);
       },
       onBlur: childTree => {
         onChildBlur(k, childTree);
@@ -89,76 +71,42 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
   _checkProps(props: Props<T>) {
     const [_, tree] = props.link.formState;
     // TODO(zach): This probably isn't necessary if the typechecks work with ShapedTree
-    if (tree.type !== "object") {
-      throw new Error("Tree doesn't have an object root.");
-    }
+    // if (tree.type !== "object") {
+    //   throw new Error("Tree doesn't have an object root.");
+    // }
   }
 
-  // notes change, runs validation
-  _onChange: (FormState<T>) => void = ([newValue, newTree]: FormState<T>) => {
-    const [oldValue, oldTree] = this.props.link.formState;
-
-    const newMeta = {
-      ...oldTree.data.meta,
-      changed: true,
-    };
-    // When to clear server errors?
-    const clientErrors = this.props.validation(newValue);
-    const newErrors: Err = {
-      client: clientErrors,
-      server: [],
-    };
-
-    invariant(
-      newTree.type === "object",
-      "ObjectField got a non-object tree in _onChange"
+  onChildChange: <V>(string, FormState<V>) => void = <V>(
+    key: string,
+    newChild: FormState<V>
+  ) => {
+    this.props.link.onChange(
+      setChanged(
+        validate(
+          this.props.validation,
+          replaceObjectChild(key, newChild, this.props.link.formState)
+        )
+      )
     );
-    this.props.link.onChange([
-      newValue,
-      {
-        type: "object",
-        data: {
-          errors: newErrors,
-          meta: newMeta,
-        },
-        children: newTree.children,
-      },
-    ]);
   };
 
-  onChildBlur: (
-    string,
-    Tree<{
-      errors: Err,
-      meta: MetaField,
-    }>
-  ) => void = (key, childTree) => {
+  onChildBlur: <V>(string, ShapedTree<V, Extras>) => void = <V>(
+    key: string,
+    childTree: ShapedTree<V, Extras>
+  ) => {
     const [_, tree] = this.props.link.formState;
-    invariant(
-      tree.type === "object",
-      "Got a non-object node in onChildBlur() of ObjectField"
+    this.props.link.onBlur(
+      mapRoot(
+        setExtrasTouched,
+        dangerouslyReplaceObjectChild(key, childTree, tree)
+      )
     );
-    const newTree = {
-      type: "object",
-      data: {
-        ...tree.data,
-        meta: {
-          ...tree.data.meta,
-          touched: true,
-        },
-      },
-      children: {
-        ...tree.children,
-        [key]: childTree,
-      },
-    };
-    this.props.link.onBlur(newTree);
   };
 
   render() {
     const links = makeLinks(
       this.props.link.formState,
-      this._onChange,
+      this.onChildChange,
       this.onChildBlur
     );
     return this.props.children(links);

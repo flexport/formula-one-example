@@ -2,17 +2,16 @@
 
 import * as React from "react";
 
-import type {
-  FeedbackStrategy,
-  MetaField,
-  OnChange,
-  ShapedTree,
-  FormState,
-  Err,
-  OnBlur,
-} from "./types";
-import {treeFromValue, cleanMeta, cleanErrors} from "./types";
-import {type Tree, strictZipWith} from "./Tree";
+import type {MetaField, OnChange, Err, OnBlur, Extras} from "./types";
+import {cleanMeta, cleanErrors} from "./types";
+import {type FormState} from "./formState";
+import {type Tree, strictZipWith} from "./tree";
+import {
+  type ShapedTree,
+  treeFromValue,
+  checkShape,
+  shapedZipWith,
+} from "./shapedTree";
 
 export type FormContextPayload = {
   shouldShowError: (meta: MetaField) => boolean,
@@ -33,14 +32,19 @@ function newFormState<T>(value: T): FormState<T> {
   return [
     value,
     treeFromValue(value, {
-      errors: {
-        client: "pending",
-        server: "unchecked",
-      },
+      errors: cleanErrors,
       meta: cleanMeta,
     }),
   ];
 }
+
+export type FeedbackStrategy =
+  | "Always"
+  | "OnFirstBlur"
+  | "OnFirstChange"
+  | "OnFirstSuccess"
+  | "OnFirstSuccessOrFirstBlur"
+  | "OnSubmit";
 
 function getShouldShowError(strategy: FeedbackStrategy) {
   switch (strategy) {
@@ -110,15 +114,7 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
     this.setState({formState: newState, pristine: false});
   };
 
-  onBlur: OnBlur<T> = (
-    newTree: ShapedTree<
-      T,
-      {
-        errors: Err,
-        meta: MetaField,
-      }
-    >
-  ) => {
+  onBlur: OnBlur<T> = (newTree: ShapedTree<T, Extras>) => {
     this.setState({
       formState: [this.state.formState[0], newTree],
     });
@@ -132,9 +128,10 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
     if (serverErrors != null) {
       // TODO(zach): Clean this up
       try {
+        const shapedServerErrors = checkShape(formState[0], serverErrors);
         mergedFormState = [
           formState[0],
-          strictZipWith(mergeErrors, formState[1], serverErrors),
+          shapedZipWith(mergeErrors, formState[1], shapedServerErrors),
         ];
       } catch (e) {
         mergedFormState = formState;

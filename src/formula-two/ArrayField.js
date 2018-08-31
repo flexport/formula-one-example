@@ -9,14 +9,33 @@ import type {
   ArrayNode,
   Err,
   OnChange,
-  FormState,
+  Extras,
 } from "./types";
-import {arrayChild, cleanErrors, cleanMeta, treeFromValue} from "./types";
-import {type Tree} from "./Tree";
+import {cleanErrors, cleanMeta} from "./types";
+import {
+  type ShapedTree,
+  treeFromValue,
+  forgetShape,
+  checkShape,
+  dangerouslyReplaceArrayChild,
+  mapRoot,
+  dangerouslySetChildren,
+  shapedArrayChildren,
+} from "./shapedTree";
+import {type Tree} from "./tree";
 import {removeAt, replaceAt, moveFromTo, insertAt} from "./utils/array";
 import {type FormContextPayload, FormContext} from "./Form";
 import invariant from "./utils/invariant";
 import withFormContext from "./withFormContext";
+import {
+  type FormState,
+  replaceArrayChild,
+  setTouched,
+  setChanged,
+  setExtrasTouched,
+  arrayChild,
+  validate,
+} from "./formState";
 
 type ToFieldLink = <T>(T) => FieldLink<T>;
 type Links<E> = Array<$Call<ToFieldLink, E>>;
@@ -38,18 +57,12 @@ type Props<E> = {|
 function makeLinks<E>(
   formState: FormState<Array<E>>,
   onChildChange: (number, FormState<E>) => void,
-  onChildBlur: (
-    number,
-    Tree<{
-      errors: Err,
-      meta: MetaField,
-    }>
-  ) => void
+  onChildBlur: (number, ShapedTree<E, Extras>) => void
 ): Links<E> {
-  const [oldValue, oldTree] = formState;
+  const [oldValue] = formState;
   return oldValue.map((x, i) => {
     return {
-      formState: arrayChild(formState, i),
+      formState: arrayChild(i, formState),
       onChange: childFormState => {
         onChildChange(i, childFormState);
       },
@@ -73,12 +86,12 @@ class ArrayField<E> extends React.Component<Props<E>> {
   _checkProps(props: Props<E>) {
     const [value, tree] = props.link.formState;
     // TODO(zach): This probably isn't necessary if the typechecks work with ShapedTree
-    if (tree.type !== "array") {
-      throw new Error("Tree doesn't have an object root.");
-    }
-    if (tree.children.length !== value.length) {
-      throw new Error("Tree has the wrong number of children");
-    }
+    // if (tree.type !== "array") {
+    //   throw new Error("Tree doesn't have an object root.");
+    // }
+    // if (tree.children.length !== value.length) {
+    //   throw new Error("Tree has the wrong number of children");
+    // }
   }
 
   componentDidUpdate() {
@@ -87,56 +100,27 @@ class ArrayField<E> extends React.Component<Props<E>> {
 
   onChildChange: (number, FormState<E>) => void = (
     index: number,
-    [childValue, childTree]: FormState<E>
+    newChild: FormState<E>
   ) => {
-    const [oldValue, oldTree] = this.props.link.formState;
-
-    const newMeta = {
-      ...oldTree.data.meta,
-      changed: true,
-    };
-    const newValue = replaceAt(index, childValue, oldValue);
-
-    invariant(
-      oldTree.type === "array",
-      "Got a non-array node in ArrayField's onChildChange"
+    // TODO(zach): validation
+    this.props.link.onChange(
+      setChanged(
+        validate(
+          this.props.validation,
+          replaceArrayChild(index, newChild, this.props.link.formState)
+        )
+      )
     );
-    const newTree = {
-      type: "array",
-      data: {
-        ...oldTree.data,
-        meta: newMeta,
-      },
-      children: replaceAt(index, childTree, oldTree.children),
-    };
-
-    this.props.link.onChange([newValue, newTree]);
   };
 
-  onChildBlur: (
-    number,
-    Tree<{
-      errors: Err,
-      meta: MetaField,
-    }>
-  ) => void = (index, childTree) => {
+  onChildBlur: (number, ShapedTree<E, Extras>) => void = (index, childTree) => {
     const [_, tree] = this.props.link.formState;
-    invariant(
-      tree.type === "array",
-      "ArrayField got a non-array tree in onChildBlur()"
+    this.props.link.onBlur(
+      mapRoot(
+        setExtrasTouched,
+        dangerouslyReplaceArrayChild(index, childTree, tree)
+      )
     );
-    const newTree = {
-      type: "array",
-      data: {
-        ...tree.data,
-        meta: {
-          ...tree.data.meta,
-          touched: true,
-        },
-      },
-      children: replaceAt(index, childTree, tree.children),
-    };
-    this.props.link.onBlur(newTree);
   };
 
   addChildField: (number, E) => void = (index: number, childValue: E) => {
@@ -147,73 +131,39 @@ class ArrayField<E> extends React.Component<Props<E>> {
     };
 
     const newValue = insertAt(index, childValue, oldValue);
-    invariant(
-      oldTree.type === "array",
-      "ArrayField got a non-array node in addChildField()"
-    );
-    const newTree = {
-      type: "array",
-      data: {
-        ...oldTree.data,
-        meta: {
-          ...oldTree.data.meta,
-          touched: true,
-          changed: true,
-        },
-      },
-      children: insertAt(
+    const newTree = dangerouslySetChildren(
+      insertAt(
         index,
         treeFromValue(childValue, cleanNode),
-        oldTree.children
+        shapedArrayChildren(oldTree)
       ),
-    };
-    this.props.link.onChange([newValue, newTree]);
+      oldTree
+    );
+
+    this.props.link.onChange(setChanged(setTouched([newValue, newTree])));
   };
 
   removeChildField = (index: number) => {
     const [oldValue, oldTree] = this.props.link.formState;
 
     const newValue = removeAt(index, oldValue);
-    invariant(
-      oldTree.type === "array",
-      "ArrayField got a non-array node in removeChildField()"
+    const newTree = dangerouslySetChildren(
+      removeAt(index, shapedArrayChildren(oldTree)),
+      oldTree
     );
-    const newTree = {
-      type: "array",
-      data: {
-        ...oldTree.data,
-        meta: {
-          ...oldTree.data.meta,
-          touched: true,
-          changed: true,
-        },
-      },
-      children: removeAt(index, oldTree.children),
-    };
-    this.props.link.onChange([newValue, newTree]);
+
+    this.props.link.onChange(setChanged(setTouched([newValue, newTree])));
   };
 
   moveChildField = (from: number, to: number) => {
     const [oldValue, oldTree] = this.props.link.formState;
 
     const newValue = moveFromTo(from, to, oldValue);
-    invariant(
-      oldTree.type === "array",
-      "ArrayField got a non-array node in moveChildField()"
+    const newTree = dangerouslySetChildren(
+      moveFromTo(from, to, shapedArrayChildren(oldTree)),
+      oldTree
     );
-    const newTree = {
-      type: "array",
-      data: {
-        ...oldTree.data,
-        meta: {
-          ...oldTree.data.meta,
-          touched: true,
-          changed: true,
-        },
-      },
-      children: moveFromTo(from, to, oldTree.children),
-    };
-    this.props.link.onChange([newValue, newTree]);
+    this.props.link.onChange(setChanged(setTouched([newValue, newTree])));
   };
 
   render() {

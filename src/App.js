@@ -4,13 +4,11 @@ import React, {Component} from "react";
 import Form from "./formula-two/Form";
 import ObjectField from "./formula-two/ObjectField";
 import ArrayField from "./formula-two/ArrayField";
-import {type FormState} from "./formula-two/types";
 
 import NumberInput from "./inputs/NumberInput";
 import StringInput from "./inputs/StringInput";
 import makeField from "./formula-two/makeField";
 
-// XXX(zach): better ShapedTree
 // XXX(zach): Clean up tree reconstructions
 // XXX(zach): Rename Tree.js to tree.js
 // XXX(zach): Name for type of OnBlur arg
@@ -84,6 +82,12 @@ class App extends Component<{}, State> {
                 formState,
                 onChange,
                 onBlur,
+              }}
+              validation={v => {
+                if (v.s === "" || v.a.some(x => x === "")) {
+                  return ["No blank string values"];
+                }
+                return [];
               }}
             >
               {links => {
