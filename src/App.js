@@ -48,7 +48,7 @@ class App extends Component<{}, State> {
       s: "",
       a: ["hello", "world", "!!!"],
     },
-    error: ({
+    error: {
       type: "object",
       data: ["This is a server error"],
       children: {
@@ -67,7 +67,29 @@ class App extends Component<{}, State> {
           ],
         },
       },
-    }: Tree<ServerErrors>),
+    },
+  };
+
+  changeServerErrors = () => {
+    this.setState({
+      error: {
+        type: "object",
+        data: ["Zach is the best"],
+        children: {
+          n: leaf([]),
+          s: leaf([]),
+          a: {
+            type: "array",
+            data: [],
+            children: [
+              leaf(["Zach is the best", "Zach is the best"]),
+              leaf(["Zach is the best"]),
+              leaf([]),
+            ],
+          },
+        },
+      },
+    });
   };
 
   render() {
@@ -148,6 +170,9 @@ class App extends Component<{}, State> {
               }}
             </ObjectField>
             <button onClick={onSubmit}>Submit</button>
+            <button onClick={this.changeServerErrors}>
+              Different server errors
+            </button>
             <Errors link={link}>
               {({shouldShowErrors, flattened}) => {
                 if (!shouldShowErrors) {

@@ -117,6 +117,7 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
         oldServerErrors: props.serverErrors,
       };
     }
+    return null;
   }
 
   constructor(props: Props<T>) {
