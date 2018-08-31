@@ -4,7 +4,7 @@ import * as React from "react";
 import {FormContext, type FormContextPayload} from "./Form";
 
 export default function withFormContext<
-  InnerProps: {formContext: FormContextPayload},
+  InnerProps: {+formContext: FormContextPayload},
   InnerComponent: React.ComponentType<InnerProps>
 >(
   Component: InnerComponent
@@ -12,7 +12,7 @@ export default function withFormContext<
   React.Component<
     $Diff<
       React.ElementConfig<InnerComponent>,
-      {formContext: FormContextPayload}
+      {+formContext: FormContextPayload}
     >
   >
 > {

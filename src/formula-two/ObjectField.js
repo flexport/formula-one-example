@@ -24,10 +24,10 @@ type ToFieldLink = <T>(T) => FieldLink<T>;
 type Links<T: {}> = $ObjMap<T, ToFieldLink>;
 
 type Props<T: {}> = {|
-  link: FieldLink<T>,
-  formContext: FormContextPayload,
-  validation: Validation<T>,
-  children: (links: Links<T>) => React.Node,
+  +link: FieldLink<T>,
+  +formContext: FormContextPayload,
+  +validation: Validation<T>,
+  +children: (links: Links<T>) => React.Node,
 |};
 
 function makeLinks<T: {}, V>(

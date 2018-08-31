@@ -2,7 +2,14 @@
 
 import * as React from "react";
 
-import type {MetaField, OnChange, Err, OnBlur, Extras} from "./types";
+import type {
+  MetaField,
+  OnChange,
+  Err,
+  OnBlur,
+  Extras,
+  FieldLink,
+} from "./types";
 import {cleanMeta, cleanErrors} from "./types";
 import {type FormState} from "./formState";
 import {type Tree, strictZipWith} from "./tree";
@@ -75,18 +82,13 @@ function mergeErrors(
 
 type Props<T> = {
   // This is *only* used to intialize the form. Further changes will be ignored
-  initialValue: T,
-  feedbackStrategy: FeedbackStrategy,
-  onSubmit: T => void,
+  +initialValue: T,
+  +feedbackStrategy: FeedbackStrategy,
+  +onSubmit: T => void,
   // We hope this is a ShapedTree<T, ...>, but I don't think we can guarantee it
   // We can with the write constructors (check: (T, Tree<S>) => ShapedTree<T, S>)
-  serverErrors: null | Tree<Array<string>>,
-  children: (
-    formState: FormState<T>,
-    onChange: OnChange<FormState<T>>,
-    onBlur: OnBlur<T>,
-    onSubmit: () => void
-  ) => React.Node,
+  +serverErrors: null | Tree<Array<string>>,
+  +children: (link: FieldLink<T>, onSubmit: () => void) => React.Node,
 };
 type State<T> = {
   formState: FormState<T>,
@@ -149,9 +151,11 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
         }}
       >
         {this.props.children(
-          mergedFormState,
-          this.onChange,
-          this.onBlur,
+          {
+            formState: mergedFormState,
+            onChange: this.onChange,
+            onBlur: this.onBlur,
+          },
           this.onSubmit
         )}
       </FormContext.Provider>

@@ -50,21 +50,10 @@ interface ValidatingComponent<P, S> extends React.Component<P, S> {
   validate(): Err;
 }
 export type FieldLink<T> = {|
-  formState: FormState<T>,
-  onChange: OnChange<FormState<T>>,
+  +formState: FormState<T>,
+  +onChange: OnChange<FormState<T>>,
   // not sure whether this or onChange style is better
-  onBlur: OnBlur<T>,
+  +onBlur: OnBlur<T>,
 |};
-
-export type ObjectNode<T> = {
-  type: "object",
-  data: T,
-  children: {[string]: Tree<T>},
-};
-export type ArrayNode<T> = {
-  type: "array",
-  data: T,
-  children: Array<Tree<T>>,
-};
 
 export type Validation<T> = T => Array<string>;

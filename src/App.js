@@ -4,15 +4,13 @@ import React, {Component} from "react";
 import Form from "./formula-two/Form";
 import ObjectField from "./formula-two/ObjectField";
 import ArrayField from "./formula-two/ArrayField";
+import Errors from "./formula-two/Errors";
 
 import NumberInput from "./inputs/NumberInput";
 import StringInput from "./inputs/StringInput";
 import makeField from "./formula-two/makeField";
 
-// XXX(zach): Clean up tree reconstructions
-// XXX(zach): Rename Tree.js to tree.js
-// XXX(zach): Name for type of OnBlur arg
-// XXX(zach): <Field> HOC
+// XXX(zach): <Field> typing mystery
 // XXX(zach): rename onFoo to handleFoo in some places
 
 const NumberField = makeField(NumberInput);
@@ -75,14 +73,10 @@ class App extends Component<{}, State> {
           console.log("SUBMITTED", value);
         }}
       >
-        {(formState, onChange, onBlur, onSubmit) => (
+        {(link, onSubmit) => (
           <React.Fragment>
             <ObjectField
-              link={{
-                formState,
-                onChange,
-                onBlur,
-              }}
+              link={link}
               validation={v => {
                 if (v.s === "" || v.a.some(x => x === "")) {
                   return ["No blank string values"];
@@ -147,6 +141,20 @@ class App extends Component<{}, State> {
               }}
             </ObjectField>
             <button onClick={onSubmit}>Submit</button>
+            <Errors link={link}>
+              {({shouldShowErrors, flattened}) => {
+                if (!shouldShowErrors) {
+                  return null;
+                }
+                return (
+                  <ul>
+                    {flattened.map(e => (
+                      <li>{e}</li>
+                    ))}
+                  </ul>
+                );
+              }}
+            </Errors>
           </React.Fragment>
         )}
       </Form>

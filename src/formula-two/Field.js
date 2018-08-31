@@ -8,10 +8,10 @@ import withFormContext from "./withFormContext";
 import {setExtrasTouched, getExtras} from "./formState";
 
 type Props<T> = {|
-  link: FieldLink<T>,
-  validation: Validation<T>,
-  formContext: FormContextPayload,
-  children: (
+  +link: FieldLink<T>,
+  +validation: Validation<T>,
+  +formContext: FormContextPayload,
+  +children: (
     value: T,
     errors: $ReadOnlyArray<string>,
     onChange: (T) => void,

@@ -6,7 +6,6 @@ import type {
   FieldLink,
   MetaField,
   Validation,
-  ArrayNode,
   Err,
   OnChange,
   Extras,
@@ -41,10 +40,10 @@ type ToFieldLink = <T>(T) => FieldLink<T>;
 type Links<E> = Array<$Call<ToFieldLink, E>>;
 
 type Props<E> = {|
-  link: FieldLink<Array<E>>,
-  formContext: FormContextPayload,
-  validation: Validation<Array<E>>,
-  children: (
+  +link: FieldLink<Array<E>>,
+  +formContext: FormContextPayload,
+  +validation: Validation<Array<E>>,
+  +children: (
     links: Links<E>,
     {
       addField: (index: number, value: E) => void,
