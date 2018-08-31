@@ -12,7 +12,6 @@ import NumberInput from "./inputs/NumberInput";
 import StringInput from "./inputs/StringInput";
 import makeField from "./formula-two/makeField";
 
-// XXX(zach): Server errors
 // XXX(zach): Librarification (exports)
 // XXX(zach): Tests
 // XXX(zach): Async validations
