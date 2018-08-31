@@ -13,6 +13,8 @@ import {
   setExtrasTouched,
   objectChild,
   validate,
+  getExtras,
+  setClientErrors,
 } from "./formState";
 import {
   type ShapedTree,
@@ -33,7 +35,8 @@ type Props<T: {}> = {|
 function makeLinks<T: {}, V>(
   formState: FormState<T>,
   onChildChange: (string, FormState<V>) => void,
-  onChildBlur: (string, ShapedTree<V, Extras>) => void
+  onChildBlur: (string, ShapedTree<V, Extras>) => void,
+  onChildValidation: (string, ShapedTree<V, Extras>) => void
 ): Links<T> {
   const [value] = formState;
   return Object.keys(value).reduce((memo, k) => {
@@ -44,6 +47,9 @@ function makeLinks<T: {}, V>(
       },
       onBlur: childTree => {
         onChildBlur(k, childTree);
+      },
+      onValidation: childTree => {
+        onChildValidation(k, childTree);
       },
     };
     memo[k] = l;
@@ -59,9 +65,34 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
     validation: () => [],
   };
 
+  // fieldChildren: $ObjMap<T, <X>(X) => ValidatingComponent> = {};
+
   constructor(props: Props<T>) {
     super(props);
     this._checkProps(props);
+  }
+
+  validate() {
+    const [value] = this.props.link.formState;
+    const {errors} = getExtras(this.props.link.formState);
+    if (errors.client === "pending") {
+      this.props.link.onValidation(
+        setClientErrors(
+          this.props.validation(value),
+          this.props.link.formState
+        )[1]
+      );
+    }
+    // Need to validate children even if we don't need to validate
+    // Object.keys(this.fieldChildren).forEach(k => {
+    //   if (this.fieldChildren[k] != null) {
+    //     this.fieldChildren[k].validate();
+    //   }
+    // });
+  }
+
+  componentDidMount() {
+    this.validate();
   }
 
   componentDidUpdate() {
@@ -103,11 +134,22 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
     );
   };
 
+  onChildValidation: <V>(string, ShapedTree<V, Extras>) => void = <V>(
+    key: string,
+    childTree: ShapedTree<V, Extras>
+  ) => {
+    const [_, tree] = this.props.link.formState;
+    this.props.link.onValidation(
+      dangerouslyReplaceObjectChild(key, childTree, tree)
+    );
+  };
+
   render() {
     const links = makeLinks(
       this.props.link.formState,
       this.onChildChange,
-      this.onChildBlur
+      this.onChildBlur,
+      this.onChildValidation
     );
     return this.props.children(links);
   }

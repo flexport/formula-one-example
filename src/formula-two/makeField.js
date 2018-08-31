@@ -5,7 +5,13 @@ import type {FieldLink, Validation, Err} from "./types";
 import {mapRoot} from "./shapedTree";
 import {type FormContextPayload} from "./Form";
 import withFormContext from "./withFormContext";
-import {setExtrasTouched, getExtras, setChanged, validate} from "./formState";
+import {
+  setExtrasTouched,
+  getExtras,
+  setChanged,
+  validate,
+  setClientErrors,
+} from "./formState";
 
 function getErrors(errors: Err) {
   let flatErrors = [];
@@ -40,6 +46,23 @@ export default function makeField<T>(
     static defaultProps = {
       validation: () => [],
     };
+
+    validate() {
+      const [value] = this.props.link.formState;
+      const {errors} = getExtras(this.props.link.formState);
+      if (errors.client === "pending") {
+        this.props.link.onValidation(
+          setClientErrors(
+            this.props.validation(value),
+            this.props.link.formState
+          )[1]
+        );
+      }
+    }
+
+    componentDidMount() {
+      this.validate();
+    }
 
     onChange: T => void = (newValue: T) => {
       const [_, oldTree] = this.props.link.formState;

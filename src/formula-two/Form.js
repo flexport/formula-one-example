@@ -7,11 +7,15 @@ import type {
   OnChange,
   Err,
   OnBlur,
+  OnValidation,
   Extras,
   FieldLink,
 } from "./types";
 import {cleanMeta, cleanErrors} from "./types";
-import {type FormState} from "./formState";
+import {
+  type FormState,
+  monoidallyCombineFormStatesForValidation,
+} from "./formState";
 import {type Tree, strictZipWith} from "./tree";
 import {
   type ShapedTree,
@@ -59,6 +63,8 @@ function getShouldShowError(strategy: FeedbackStrategy) {
       return (meta: MetaField) => true;
     case "OnFirstTouch":
       return (meta: MetaField) => meta.touched;
+    case "OnFirstChange":
+      return (meta: MetaField) => meta.changed;
     default:
       throw new Error("Unimplemented feedback strategy: " + strategy);
   }
@@ -112,14 +118,27 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
     this.props.onSubmit(this.state.formState[0]);
   };
 
-  onChange: (newValue: FormState<T>) => void = (newState: FormState<T>) => {
+  updateFormState: (newValue: FormState<T>) => void = (
+    newState: FormState<T>
+  ) => {
     this.setState({formState: newState, pristine: false});
   };
 
-  onBlur: OnBlur<T> = (newTree: ShapedTree<T, Extras>) => {
+  updateTree: OnBlur<T> = (newTree: ShapedTree<T, Extras>) => {
     this.setState({
       formState: [this.state.formState[0], newTree],
     });
+  };
+
+  updateTreeForValidation: OnValidation<T> = (
+    newTree: ShapedTree<T, Extras>
+  ) => {
+    this.setState(({formState}) => ({
+      formState: monoidallyCombineFormStatesForValidation(formState, [
+        formState[0],
+        newTree,
+      ]),
+    }));
   };
 
   render() {
@@ -153,8 +172,9 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
         {this.props.children(
           {
             formState: mergedFormState,
-            onChange: this.onChange,
-            onBlur: this.onBlur,
+            onChange: this.updateFormState,
+            onBlur: this.updateTree,
+            onValidation: this.updateTreeForValidation,
           },
           this.onSubmit
         )}

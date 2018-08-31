@@ -9,9 +9,11 @@ import {
   dangerouslySetChildren,
   shapedObjectChild,
   shapedArrayChild,
+  shapedZipWith,
 } from "./shapedTree";
 import type {Extras, ClientErrors, Validation} from "./types";
 import {replaceAt} from "./utils/array";
+import invariant from "./utils/invariant";
 
 // invariant, Tree is shaped like T
 export type FormState<T> = [T, ShapedTree<T, Extras>];
@@ -145,4 +147,67 @@ export function replaceArrayChildren<E>(
     [[], []]
   );
   return [childValues, dangerouslySetChildren(childTrees, tree)];
+}
+
+function combineExtrasForValidation(oldExtras: Extras, newExtras: Extras) {
+  const {meta: oldMeta, errors: oldErrors} = oldExtras;
+  const {meta: newMeta, errors: newErrors} = newExtras;
+
+  // Only asyncValidationInFlight + succeeded may change
+  invariant(
+    oldMeta.touched === newMeta.touched,
+    "Recieved a new meta.touched when monoidally combining errors"
+  );
+  invariant(
+    oldMeta.changed === newMeta.changed,
+    "Recieved a new meta.changed when monoidally combining errors"
+  );
+
+  // No combination is possible if the old client errors are not pending
+  if (oldErrors.client !== "pending") {
+    return oldExtras;
+  }
+
+  // No combination is possible if the new client errors are pending
+  if (newErrors.client === "pending") {
+    return oldExtras;
+  }
+
+  return {
+    meta: {
+      touched: oldMeta.touched,
+      changed: oldMeta.changed,
+      succeeded: newMeta.succeeded,
+      asyncValidationInFlight:
+        oldMeta.asyncValidationInFlight || newMeta.asyncValidationInFlight,
+    },
+    errors: {
+      client: newErrors.client,
+      server: newErrors.server,
+    },
+  };
+}
+
+function monoidallyCombineTreesForValidation<T>(
+  oldTree: ShapedTree<T, Extras>,
+  newTree: ShapedTree<T, Extras>
+): ShapedTree<T, Extras> {
+  return shapedZipWith(combineExtrasForValidation, oldTree, newTree);
+}
+
+// Also sets asyncValidationInFlight
+export function monoidallyCombineFormStatesForValidation<T>(
+  oldState: FormState<T>,
+  newState: FormState<T>
+): FormState<T> {
+  // Value should never change when combining errors
+  invariant(
+    oldState[0] === newState[0],
+    "Received a new value when monoidally combining errors"
+  );
+
+  return [
+    oldState[0],
+    monoidallyCombineTreesForValidation(oldState[1], newState[1]),
+  ];
 }

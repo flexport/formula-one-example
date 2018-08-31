@@ -10,9 +10,11 @@ import NumberInput from "./inputs/NumberInput";
 import StringInput from "./inputs/StringInput";
 import makeField from "./formula-two/makeField";
 
+// XXX(zach): Eslint warning cleanup
+// XXX(zach): Librarification (exports)
+// XXX(zach): Async validations
 // XXX(zach): <Field> typing mystery
 // XXX(zach): rename onFoo to handleFoo in some places
-// XXX(zach): Librarification (exports)
 
 const NumberField = makeField(NumberInput);
 const StringField = makeField(StringInput);
@@ -53,7 +55,7 @@ type State = {
 class App extends Component<{}, State> {
   state = {
     value: {
-      n: 0,
+      n: 232,
       s: "",
       a: ["hello", "world", "!!!"],
     },
@@ -69,7 +71,7 @@ class App extends Component<{}, State> {
       <Form
         serverErrors={null}
         initialValue={this.state.value}
-        feedbackStrategy="OnFirstTouch"
+        feedbackStrategy="Always"
         onSubmit={value => {
           console.log("SUBMITTED", value);
         }}

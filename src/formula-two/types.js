@@ -43,17 +43,20 @@ export type Extras = {
   meta: MetaField,
 };
 
-export type OnChange<T> = T => void;
+export type OnChange<T> = (FormState<T>) => void;
 export type OnBlur<T> = (ShapedTree<T, Extras>) => void;
+// This seems like it should be ClientError => void, but the new subtree needs to travel up
+export type OnValidation<T> = (ShapedTree<T, Extras>) => void;
 
-interface ValidatingComponent<P, S> extends React.Component<P, S> {
-  validate(): Err;
-}
+// export interface ValidatingComponent extends React.Component<any> {
+//   validate(): ClientErrors;
+// }
+
 export type FieldLink<T> = {|
   +formState: FormState<T>,
-  +onChange: OnChange<FormState<T>>,
-  // not sure whether this or onChange style is better
+  +onChange: OnChange<T>,
   +onBlur: OnBlur<T>,
+  +onValidation: OnValidation<T>,
 |};
 
 export type Validation<T> = T => Array<string>;

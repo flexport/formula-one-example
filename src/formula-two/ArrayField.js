@@ -34,6 +34,8 @@ import {
   setExtrasTouched,
   arrayChild,
   validate,
+  getExtras,
+  setClientErrors,
 } from "./formState";
 
 type ToFieldLink = <T>(T) => FieldLink<T>;
@@ -56,7 +58,8 @@ type Props<E> = {|
 function makeLinks<E>(
   formState: FormState<Array<E>>,
   onChildChange: (number, FormState<E>) => void,
-  onChildBlur: (number, ShapedTree<E, Extras>) => void
+  onChildBlur: (number, ShapedTree<E, Extras>) => void,
+  onChildValidation: (number, ShapedTree<E, Extras>) => void
 ): Links<E> {
   const [oldValue] = formState;
   return oldValue.map((x, i) => {
@@ -68,6 +71,9 @@ function makeLinks<E>(
       onBlur: childTree => {
         onChildBlur(i, childTree);
       },
+      onValidation: childTree => {
+        onChildValidation(i, childTree);
+      },
     };
   });
 }
@@ -77,9 +83,30 @@ class ArrayField<E> extends React.Component<Props<E>> {
     validation: () => [],
   };
 
+  // fieldChildren: Array<ValidatingComponent>;
+
   constructor(props: Props<E>) {
     super(props);
     this._checkProps(props);
+  }
+
+  validate() {
+    const [value] = this.props.link.formState;
+    const {errors} = getExtras(this.props.link.formState);
+    if (errors.client === "pending") {
+      this.props.link.onValidation(
+        setClientErrors(
+          this.props.validation(value),
+          this.props.link.formState
+        )[1]
+      );
+    }
+    // Need to validate children even if we don't need to validate
+    // Object.keys(this.fieldChildren).forEach(k => {
+    //   if (this.fieldChildren[k] != null) {
+    //     this.fieldChildren[k].validate();
+    //   }
+    // });
   }
 
   _checkProps(props: Props<E>) {
@@ -91,6 +118,10 @@ class ArrayField<E> extends React.Component<Props<E>> {
     // if (tree.children.length !== value.length) {
     //   throw new Error("Tree has the wrong number of children");
     // }
+  }
+
+  componentDidMount() {
+    this.validate();
   }
 
   componentDidUpdate() {
@@ -119,6 +150,16 @@ class ArrayField<E> extends React.Component<Props<E>> {
         setExtrasTouched,
         dangerouslyReplaceArrayChild(index, childTree, tree)
       )
+    );
+  };
+
+  onChildValidation: (number, ShapedTree<E, Extras>) => void = (
+    index,
+    childTree
+  ) => {
+    const [_, tree] = this.props.link.formState;
+    this.props.link.onValidation(
+      dangerouslyReplaceArrayChild(index, childTree, tree)
     );
   };
 
@@ -168,7 +209,12 @@ class ArrayField<E> extends React.Component<Props<E>> {
   render() {
     const {formState} = this.props.link;
 
-    const links = makeLinks(formState, this.onChildChange, this.onChildBlur);
+    const links = makeLinks(
+      formState,
+      this.onChildChange,
+      this.onChildBlur,
+      this.onChildValidation
+    );
     return this.props.children(links, {
       addField: this.addChildField,
       removeField: this.removeChildField,
