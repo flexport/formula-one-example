@@ -5,7 +5,6 @@ import * as React from "react";
 import type {FieldLink, Validation, Extras} from "./types";
 import {type FormContextPayload} from "./Form";
 import withFormContext from "./withFormContext";
-import invariant from "./utils/invariant";
 import {
   type FormState,
   setChanged,
@@ -65,13 +64,6 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
     validation: () => [],
   };
 
-  // fieldChildren: $ObjMap<T, <X>(X) => ValidatingComponent> = {};
-
-  constructor(props: Props<T>) {
-    super(props);
-    this._checkProps(props);
-  }
-
   validate() {
     const [value] = this.props.link.formState;
     const {errors} = getExtras(this.props.link.formState);
@@ -83,28 +75,10 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
         )[1]
       );
     }
-    // Need to validate children even if we don't need to validate
-    // Object.keys(this.fieldChildren).forEach(k => {
-    //   if (this.fieldChildren[k] != null) {
-    //     this.fieldChildren[k].validate();
-    //   }
-    // });
   }
 
   componentDidMount() {
     this.validate();
-  }
-
-  componentDidUpdate() {
-    this._checkProps(this.props);
-  }
-
-  _checkProps(props: Props<T>) {
-    const [_, tree] = props.link.formState;
-    // TODO(zach): This probably isn't necessary if the typechecks work with ShapedTree
-    // if (tree.type !== "object") {
-    //   throw new Error("Tree doesn't have an object root.");
-    // }
   }
 
   onChildChange: <V>(string, FormState<V>) => void = <V>(

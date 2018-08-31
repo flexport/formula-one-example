@@ -4,7 +4,6 @@ import * as React from "react";
 
 import type {
   MetaField,
-  OnChange,
   Err,
   OnBlur,
   OnValidation,
@@ -16,7 +15,7 @@ import {
   type FormState,
   monoidallyCombineFormStatesForValidation,
 } from "./formState";
-import {type Tree, strictZipWith} from "./tree";
+import {type Tree} from "./tree";
 import {
   type ShapedTree,
   treeFromValue,

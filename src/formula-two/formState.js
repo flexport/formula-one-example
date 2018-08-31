@@ -135,7 +135,7 @@ export function replaceArrayChildren<E>(
   children: Array<FormState<E>>,
   formState: FormState<Array<E>>
 ): FormState<Array<E>> {
-  const [value, tree] = formState;
+  const [_, tree] = formState;
   const [childValues, childTrees]: [
     Array<E>,
     Array<ShapedTree<E, Extras>>,

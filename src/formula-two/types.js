@@ -1,7 +1,5 @@
 // @flow strict
 
-import * as React from "react";
-import type {Tree} from "./tree";
 import type {ShapedTree} from "./shapedTree";
 import {type FormState} from "./formState";
 
@@ -11,9 +9,7 @@ export type Err = {
   client: ClientErrors,
   server: ServerErrors,
 };
-export type ToError = <T>(T) => Err;
 
-// Every field keeps its own meta, not the meta of its children
 export type MetaField = {
   touched: boolean, // a blur or a change
   changed: boolean,
@@ -47,10 +43,6 @@ export type OnChange<T> = (FormState<T>) => void;
 export type OnBlur<T> = (ShapedTree<T, Extras>) => void;
 // This seems like it should be ClientError => void, but the new subtree needs to travel up
 export type OnValidation<T> = (ShapedTree<T, Extras>) => void;
-
-// export interface ValidatingComponent extends React.Component<any> {
-//   validate(): ClientErrors;
-// }
 
 export type FieldLink<T> = {|
   +formState: FormState<T>,

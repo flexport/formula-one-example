@@ -2,29 +2,18 @@
 
 import * as React from "react";
 
-import type {
-  FieldLink,
-  MetaField,
-  Validation,
-  Err,
-  OnChange,
-  Extras,
-} from "./types";
+import type {FieldLink, Validation, Extras} from "./types";
 import {cleanErrors, cleanMeta} from "./types";
 import {
   type ShapedTree,
   treeFromValue,
-  forgetShape,
-  checkShape,
   dangerouslyReplaceArrayChild,
   mapRoot,
   dangerouslySetChildren,
   shapedArrayChildren,
 } from "./shapedTree";
-import {type Tree} from "./tree";
-import {removeAt, replaceAt, moveFromTo, insertAt} from "./utils/array";
-import {type FormContextPayload, FormContext} from "./Form";
-import invariant from "./utils/invariant";
+import {removeAt, moveFromTo, insertAt} from "./utils/array";
+import {type FormContextPayload} from "./Form";
 import withFormContext from "./withFormContext";
 import {
   type FormState,
@@ -83,13 +72,6 @@ class ArrayField<E> extends React.Component<Props<E>> {
     validation: () => [],
   };
 
-  // fieldChildren: Array<ValidatingComponent>;
-
-  constructor(props: Props<E>) {
-    super(props);
-    this._checkProps(props);
-  }
-
   validate() {
     const [value] = this.props.link.formState;
     const {errors} = getExtras(this.props.link.formState);
@@ -101,31 +83,10 @@ class ArrayField<E> extends React.Component<Props<E>> {
         )[1]
       );
     }
-    // Need to validate children even if we don't need to validate
-    // Object.keys(this.fieldChildren).forEach(k => {
-    //   if (this.fieldChildren[k] != null) {
-    //     this.fieldChildren[k].validate();
-    //   }
-    // });
-  }
-
-  _checkProps(props: Props<E>) {
-    const [value, tree] = props.link.formState;
-    // TODO(zach): This probably isn't necessary if the typechecks work with ShapedTree
-    // if (tree.type !== "array") {
-    //   throw new Error("Tree doesn't have an object root.");
-    // }
-    // if (tree.children.length !== value.length) {
-    //   throw new Error("Tree has the wrong number of children");
-    // }
   }
 
   componentDidMount() {
     this.validate();
-  }
-
-  componentDidUpdate() {
-    this._checkProps(this.props);
   }
 
   onChildChange: (number, FormState<E>) => void = (
