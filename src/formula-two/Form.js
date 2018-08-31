@@ -47,7 +47,7 @@ function newFormState<T>(value: T): FormState<T> {
 
 export type FeedbackStrategy =
   | "Always"
-  | "OnFirstBlur"
+  | "OnFirstTouch"
   | "OnFirstChange"
   | "OnFirstSuccess"
   | "OnFirstSuccessOrFirstBlur"
@@ -57,7 +57,7 @@ function getShouldShowError(strategy: FeedbackStrategy) {
   switch (strategy) {
     case "Always":
       return (meta: MetaField) => true;
-    case "OnFirstBlur":
+    case "OnFirstTouch":
       return (meta: MetaField) => meta.touched;
     default:
       throw new Error("Unimplemented feedback strategy: " + strategy);

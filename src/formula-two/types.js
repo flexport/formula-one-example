@@ -15,7 +15,7 @@ export type ToError = <T>(T) => Err;
 
 // Every field keeps its own meta, not the meta of its children
 export type MetaField = {
-  touched: boolean, // blurred
+  touched: boolean, // a blur or a change
   changed: boolean,
   succeeded: boolean,
   asyncValidationInFlight: boolean,

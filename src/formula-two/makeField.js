@@ -5,7 +5,7 @@ import type {FieldLink, Validation, Err} from "./types";
 import {mapRoot} from "./shapedTree";
 import {type FormContextPayload} from "./Form";
 import withFormContext from "./withFormContext";
-import {setExtrasTouched, getExtras} from "./formState";
+import {setExtrasTouched, getExtras, setChanged, validate} from "./formState";
 
 function getErrors(errors: Err) {
   let flatErrors = [];
@@ -43,20 +43,9 @@ export default function makeField<T>(
 
     onChange: T => void = (newValue: T) => {
       const [_, oldTree] = this.props.link.formState;
-
-      this.props.link.onChange([
-        newValue,
-        mapRoot(
-          ({errors, meta}) => ({
-            errors: {
-              client: this.props.validation(newValue),
-              server: "unchecked",
-            },
-            meta: {...meta, changed: true},
-          }),
-          oldTree
-        ),
-      ]);
+      this.props.link.onChange(
+        setChanged(validate(this.props.validation, [newValue, oldTree]))
+      );
     };
 
     onBlur = () => {

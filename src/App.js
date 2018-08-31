@@ -12,6 +12,7 @@ import makeField from "./formula-two/makeField";
 
 // XXX(zach): <Field> typing mystery
 // XXX(zach): rename onFoo to handleFoo in some places
+// XXX(zach): Librarification (exports)
 
 const NumberField = makeField(NumberInput);
 const StringField = makeField(StringInput);
@@ -20,8 +21,8 @@ function checkString(s: string): Array<string> {
   if (s === "") {
     return [];
   }
-  if (!s.match(/^[a-z]*$/i)) {
-    return ["Must be alphanumeric"];
+  if (!s.match(/^[a-z\s]*$/i)) {
+    return ["Must be alpha"];
   }
   return [];
 }
@@ -68,7 +69,7 @@ class App extends Component<{}, State> {
       <Form
         serverErrors={null}
         initialValue={this.state.value}
-        feedbackStrategy="OnFirstBlur"
+        feedbackStrategy="OnFirstTouch"
         onSubmit={value => {
           console.log("SUBMITTED", value);
         }}

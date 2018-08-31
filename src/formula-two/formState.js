@@ -64,7 +64,10 @@ export function setChanged<T>(formState: FormState<T>): FormState<T> {
   return [
     formState[0],
     mapRoot(
-      ({errors, meta}) => ({errors, meta: {...meta, changed: true}}),
+      ({errors, meta}) => ({
+        errors,
+        meta: {...meta, touched: true, changed: true},
+      }),
       formState[1]
     ),
   ];
