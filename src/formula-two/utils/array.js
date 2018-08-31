@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 
 export function removeAt<E>(index: number, arr: $ReadOnlyArray<E>): Array<E> {
   return [...arr.slice(0, index), ...arr.slice(index + 1)];

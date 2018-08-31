@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 import {setEq} from "./utils/set";
 import invariant from "./utils/invariant";
 

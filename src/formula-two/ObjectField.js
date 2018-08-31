@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 
 import * as React from "react";
 
@@ -18,11 +18,10 @@ import withFormContext from "./withFormContext";
 import invariant from "./utils/invariant";
 
 type ToFieldLink = <T>(T) => FieldLink<T>;
-// $FlowFixMe(zach): ???
 type Links<T: {}> = $ObjMap<T, ToFieldLink>;
 
 type Props<T: {}> = {|
-  ...$Exact<FieldLink<T>>,
+  link: FieldLink<T>,
   formContext: FormContextPayload,
   validation: Validation<T>,
   children: (links: Links<T>) => React.Node,
@@ -39,11 +38,12 @@ function makeLinks<T: {}>(
     }>
   ) => void
 ): Links<T> {
-  return Object.keys(formState[0]).reduce((memo, k) => {
-    const l: FieldLink<*> = {
-      formState: objectChild(formState, k),
+  const [value, tree] = formState;
+  return Object.keys(value).reduce((memo, k) => {
+    const l = {
+      formState: objectChild(value[k], formState, k),
       onChange: ([childValue, childTree]) => {
-        const newValue = {...formState[0], [k]: childValue};
+        const newValue = {...value, [k]: childValue};
 
         invariant(
           formState[1].type === "object",
@@ -65,7 +65,10 @@ function makeLinks<T: {}>(
       },
     };
     memo[k] = l;
-    return memo;
+    return {
+      ...memo,
+      [k]: l,
+    };
   }, {});
 }
 
@@ -84,7 +87,7 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
   }
 
   _checkProps(props: Props<T>) {
-    const [_, tree] = props.formState;
+    const [_, tree] = props.link.formState;
     // TODO(zach): This probably isn't necessary if the typechecks work with ShapedTree
     if (tree.type !== "object") {
       throw new Error("Tree doesn't have an object root.");
@@ -93,7 +96,7 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
 
   // notes change, runs validation
   _onChange: (FormState<T>) => void = ([newValue, newTree]: FormState<T>) => {
-    const [oldValue, oldTree] = this.props.formState;
+    const [oldValue, oldTree] = this.props.link.formState;
 
     const newMeta = {
       ...oldTree.data.meta,
@@ -110,7 +113,7 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
       newTree.type === "object",
       "ObjectField got a non-object tree in _onChange"
     );
-    this.props.onChange([
+    this.props.link.onChange([
       newValue,
       {
         type: "object",
@@ -130,7 +133,7 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
       meta: MetaField,
     }>
   ) => void = (key, childTree) => {
-    const [_, tree] = this.props.formState;
+    const [_, tree] = this.props.link.formState;
     invariant(
       tree.type === "object",
       "Got a non-object node in onChildBlur() of ObjectField"
@@ -149,12 +152,12 @@ class ObjectField<T: {}> extends React.Component<Props<T>> {
         [key]: childTree,
       },
     };
-    this.props.onBlur(newTree);
+    this.props.link.onBlur(newTree);
   };
 
   render() {
     const links = makeLinks(
-      this.props.formState,
+      this.props.link.formState,
       this._onChange,
       this.onChildBlur
     );

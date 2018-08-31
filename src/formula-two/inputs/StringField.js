@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 
 import * as React from "react";
 import {type FormContextPayload} from "../Form";
@@ -7,7 +7,7 @@ import {leaf} from "../Tree";
 import withFormContext from "../withFormContext";
 
 type Props = {|
-  ...FieldLink<string>,
+  link: FieldLink<string>,
   validation: Validation<string>,
   formContext: FormContextPayload,
 |};
@@ -20,7 +20,7 @@ class StringField extends React.Component<Props> {
 
   handleChange = (e: SyntheticEvent<HTMLInputElement>) => {
     const newValue = e.currentTarget.value;
-    this.props.onChange([
+    this.props.link.onChange([
       newValue,
       leaf({
         errors: {
@@ -28,7 +28,7 @@ class StringField extends React.Component<Props> {
           server: "unchecked",
         },
         meta: {
-          ...this.props.formState[1].data.meta,
+          ...this.props.link.formState[1].data.meta,
           changed: true,
         },
       }),
@@ -36,12 +36,12 @@ class StringField extends React.Component<Props> {
   };
 
   handleBlur = () => {
-    const [value, tree] = this.props.formState;
+    const [value, tree] = this.props.link.formState;
     const newMeta = {
       ...tree.data.meta,
       touched: true,
     };
-    this.props.onBlur(
+    this.props.link.onBlur(
       leaf({
         // TODO(zach): Not sure if we should blow away server errors here
         errors: {
@@ -54,7 +54,7 @@ class StringField extends React.Component<Props> {
   };
 
   getErrors() {
-    const {errors} = this.props.formState[1].data;
+    const {errors} = this.props.link.formState[1].data;
     let flatErrors = [];
     if (errors.client !== "pending") {
       flatErrors = flatErrors.concat(errors.client);
@@ -68,7 +68,9 @@ class StringField extends React.Component<Props> {
   render() {
     const {
       formContext: {shouldShowError},
-      formState: [value, tree],
+      link: {
+        formState: [value, tree],
+      },
     } = this.props;
     const showError =
       shouldShowError(tree.data.meta) && this.getErrors().length > 0;

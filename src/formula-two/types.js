@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 
 import * as React from "react";
 import type {Tree} from "./Tree";
@@ -66,11 +66,6 @@ export type FeedbackStrategy =
   | "OnFirstSuccessOrFirstBlur"
   | "OnSubmit";
 
-type $$Map<F: Function> = (<X: {}>(x: X) => $ObjMap<X, $$Map<F>>) &
-  (<E>(x: Array<E>) => Array<$Call<$$Map<F>, E>>) &
-  (<X>(x: number) => $Call<F, X>) &
-  (<X>(x: string) => $Call<F, X>);
-
 export type ObjectNode<T> = {
   type: "object",
   data: T,
@@ -135,15 +130,21 @@ export type FormState<T> = [
 ];
 
 // TODO(zach): Something, something zippers
-export function objectChild<T: {}>(
+export function objectChild<T: {}, V>(
+  _typeWitness: V,
   formState: FormState<T>,
-  key: $Keys<T>
-): FormState<*> {
+  key: string
+): FormState<V> {
+  const [value, tree] = formState;
   invariant(
-    formState[1].type === "object",
+    tree.type === "object",
     "Tried to get an object child of a non-object node."
   );
-  return [formState[0][key], formState[1].children[key]];
+  invariant(
+    value.hasOwnProperty(key) && tree.children.hasOwnProperty(key),
+    "Tried to get a non-existent child of an object node"
+  );
+  return [value[key], tree.children[key]];
 }
 
 export function arrayChild<E>(

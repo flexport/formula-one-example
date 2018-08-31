@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 
 export opaque type Either<L, R> =
   | {isLeft: true, left: L}

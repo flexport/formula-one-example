@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 
 import * as React from "react";
 
@@ -81,7 +81,7 @@ type Props<T> = {
     formState: FormState<T>,
     onChange: OnChange<FormState<T>>,
     onBlur: OnBlur<T>,
-    onSubmit: (T) => void
+    onSubmit: () => void
   ) => React.Node,
 };
 type State<T> = {

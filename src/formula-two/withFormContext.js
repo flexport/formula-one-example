@@ -1,11 +1,21 @@
-// @flow
+// @flow strict
 
 import * as React from "react";
 import {FormContext, type FormContextPayload} from "./Form";
 
 export default function withFormContext<
-  InnerProps: {formContext: FormContextPayload}
->(Component: React.ComponentType<InnerProps>) {
+  InnerProps: {formContext: FormContextPayload},
+  InnerComponent: React.ComponentType<InnerProps>
+>(
+  Component: InnerComponent
+): Class<
+  React.Component<
+    $Diff<
+      React.ElementConfig<InnerComponent>,
+      {formContext: FormContextPayload}
+    >
+  >
+> {
   class WithFormContext extends React.Component<
     {forwardedRef: React.Ref<typeof Component>} & $Diff<
       InnerProps,

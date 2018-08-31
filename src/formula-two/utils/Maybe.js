@@ -1,4 +1,4 @@
-// @flow
+// @flow strict
 
 export opaque type Maybe<T> = {present: true, value: T} | {present: false};
 

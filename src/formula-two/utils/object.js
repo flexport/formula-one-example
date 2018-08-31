@@ -1,4 +1,5 @@
-// @flow
+// @flow strict
+
 import {setEq} from "./set";
 
 export function zipWith<E, O: {[string]: E}, C>(
