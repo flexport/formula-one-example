@@ -69,6 +69,10 @@ class App extends Component<{}, State> {
     },
   };
 
+  resetServerErrors = () => {
+    this.setState({error: null});
+  };
+
   changeServerErrors = () => {
     this.setState({
       error: {
@@ -169,6 +173,9 @@ class App extends Component<{}, State> {
               }}
             </ObjectField>
             <button onClick={onSubmit}>Submit</button>
+            <button onClick={this.resetServerErrors}>
+              Clear server errors
+            </button>
             <button onClick={this.changeServerErrors}>
               Different server errors
             </button>
