@@ -28,7 +28,9 @@ export default class NumberInput extends React.Component<Props> {
           value={value}
         />
         {errors.map(e => (
-          <div style={{color: "red"}}>{e}</div>
+          <div key={e} style={{color: "red"}}>
+            {e}
+          </div>
         ))}
       </div>
     );

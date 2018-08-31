@@ -11,7 +11,7 @@ import {
   shapedArrayChild,
   shapedZipWith,
 } from "./shapedTree";
-import type {Extras, ClientErrors, Validation} from "./types";
+import type {Extras, ClientErrors, Validation, ServerErrors} from "./types";
 import {replaceAt} from "./utils/array";
 import invariant from "./utils/invariant";
 
@@ -209,5 +209,32 @@ export function monoidallyCombineFormStatesForValidation<T>(
   return [
     oldState[0],
     monoidallyCombineTreesForValidation(oldState[1], newState[1]),
+  ];
+}
+
+function replaceServerErrorsExtra(
+  newErrors: ServerErrors,
+  oldExtras: Extras
+): Extras {
+  const {meta, errors} = oldExtras;
+  return {
+    meta,
+    errors: {
+      client: errors.client,
+      server: newErrors,
+    },
+  };
+}
+export function replaceServerErrors<T>(
+  serverErrors: ShapedTree<T, ServerErrors>,
+  formState: FormState<T>
+): FormState<T> {
+  return [
+    formState[0],
+    shapedZipWith(
+      (es, oldExtras) => replaceServerErrorsExtra(es, oldExtras),
+      serverErrors,
+      formState[1]
+    ),
   ];
 }

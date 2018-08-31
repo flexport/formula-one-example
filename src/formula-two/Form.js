@@ -10,10 +10,11 @@ import type {
   Extras,
   FieldLink,
 } from "./types";
-import {cleanMeta, cleanErrors} from "./types";
+import {cleanMeta, cleanErrors, type ServerErrors} from "./types";
 import {
   type FormState,
   monoidallyCombineFormStatesForValidation,
+  replaceServerErrors,
 } from "./formState";
 import {type Tree} from "./tree";
 import {
@@ -38,14 +39,21 @@ export const FormContext: React.Context<
   submitted: true,
 });
 
-function newFormState<T>(value: T): FormState<T> {
-  return [
+function newFormState<T>(
+  value: T,
+  serverErrors: null | ShapedTree<T, ServerErrors>
+): FormState<T> {
+  const cleanState = [
     value,
     treeFromValue(value, {
       errors: cleanErrors,
       meta: cleanMeta,
     }),
   ];
+  if (serverErrors != null) {
+    return replaceServerErrors(serverErrors, cleanState);
+  }
+  return cleanState;
 }
 
 export type FeedbackStrategy =
@@ -69,22 +77,6 @@ function getShouldShowError(strategy: FeedbackStrategy) {
   }
 }
 
-function mergeErrors(
-  clientState: {
-    errors: Err,
-    meta: MetaField,
-  },
-  serverErrors: Array<string>
-): {
-  errors: Err,
-  meta: MetaField,
-} {
-  return {
-    errors: {...clientState.errors, server: serverErrors},
-    meta: clientState.meta,
-  };
-}
-
 type Props<T> = {
   // This is *only* used to intialize the form. Further changes will be ignored
   +initialValue: T,
@@ -92,23 +84,61 @@ type Props<T> = {
   +onSubmit: T => void,
   // We hope this is a ShapedTree<T, ...>, but I don't think we can guarantee it
   // We can with the write constructors (check: (T, Tree<S>) => ShapedTree<T, S>)
-  +serverErrors: null | Tree<Array<string>>,
+  // I think this should be Array<string> instead of ServerErrors, but the variance
+  // is quite tricky
+  +serverErrors: null | Tree<ServerErrors>,
   +children: (link: FieldLink<T>, onSubmit: () => void) => React.Node,
 };
 type State<T> = {
   formState: FormState<T>,
   pristine: boolean,
   submitted: boolean,
+  oldServerErrors: null | Tree<ServerErrors>,
 };
 export default class Form<T> extends React.Component<Props<T>, State<T>> {
+  static getDerivedStateFromProps(props: Props<T>, state: State<T>) {
+    let serverErrors: ShapedTree<T, ServerErrors>;
+    if (props.serverErrors != null) {
+      try {
+        serverErrors = checkShape(state.formState[0], props.serverErrors);
+      } catch (_) {
+        console.error(
+          "Server errors don't match the shape of value.\nThey will be ignored"
+        );
+        serverErrors = treeFromValue(state.formState[0], "unchecked");
+      }
+    } else {
+      serverErrors = treeFromValue(state.formState[0], "unchecked");
+    }
+
+    if (props.serverErrors !== state.oldServerErrors) {
+      return {
+        formState: replaceServerErrors(serverErrors, state.formState),
+        oldServerErrors: props.serverErrors,
+      };
+    }
+  }
+
   constructor(props: Props<T>) {
     super(props);
 
+    let serverErrors = null;
+    if (props.serverErrors != null) {
+      try {
+        serverErrors = checkShape(props.initialValue, props.serverErrors);
+      } catch (_) {
+        console.error(
+          "Server errors don't match the shape of value.\nThey will be ignored"
+        );
+        serverErrors = null;
+      }
+    }
+
     this.state = {
-      formState: newFormState(props.initialValue),
+      formState: newFormState(props.initialValue, serverErrors),
       pristine: true,
       submitted: false,
-      errors: null,
+      oldServerErrors: props.serverErrors,
     };
   }
 
@@ -141,24 +171,7 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
   };
 
   render() {
-    const {serverErrors} = this.props;
     const {formState} = this.state;
-
-    let mergedFormState = null;
-    if (serverErrors != null) {
-      // TODO(zach): Clean this up
-      try {
-        const shapedServerErrors = checkShape(formState[0], serverErrors);
-        mergedFormState = [
-          formState[0],
-          shapedZipWith(mergeErrors, formState[1], shapedServerErrors),
-        ];
-      } catch (e) {
-        mergedFormState = formState;
-      }
-    } else {
-      mergedFormState = formState;
-    }
 
     return (
       <FormContext.Provider
@@ -170,7 +183,7 @@ export default class Form<T> extends React.Component<Props<T>, State<T>> {
       >
         {this.props.children(
           {
-            formState: mergedFormState,
+            formState,
             onChange: this.updateFormState,
             onBlur: this.updateTree,
             onValidation: this.updateTreeForValidation,

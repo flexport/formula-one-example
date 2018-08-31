@@ -5,14 +5,16 @@ import Form from "./formula-two/Form";
 import ObjectField from "./formula-two/ObjectField";
 import ArrayField from "./formula-two/ArrayField";
 import Errors from "./formula-two/Errors";
+import {type Tree, leaf} from "./formula-two/tree";
+import {type ServerErrors} from "./formula-two/types";
 
 import NumberInput from "./inputs/NumberInput";
 import StringInput from "./inputs/StringInput";
 import makeField from "./formula-two/makeField";
 
-// XXX(zach): Eslint warning cleanup
 // XXX(zach): Server errors
 // XXX(zach): Librarification (exports)
+// XXX(zach): Tests
 // XXX(zach): Async validations
 // XXX(zach): <Field> typing mystery
 // XXX(zach): rename onFoo to handleFoo in some places
@@ -29,21 +31,6 @@ function checkString(s: string): Array<string> {
   }
   return [];
 }
-// function makeErrors(x: FormState): Errors {
-//   return {
-//     type: "object",
-//     data: [],
-//     children: {
-//       n: {type: "leaf", data: []},
-//       s: {type: "leaf", data: []},
-//       a: {
-//         type: "array",
-//         data: [],
-//         children: x.a.map(c => ({type: "leaf", data: [] /*checkString(c)*/})),
-//       },
-//     },
-//   };
-// }
 
 type State = {
   value: {|
@@ -51,6 +38,7 @@ type State = {
     s: string,
     a: Array<string>,
   |},
+  error: Tree<ServerErrors>,
 };
 
 class App extends Component<{}, State> {
@@ -60,17 +48,32 @@ class App extends Component<{}, State> {
       s: "",
       a: ["hello", "world", "!!!"],
     },
-    // error: makeErrors({
-    //   n: 0,
-    //   s: "",
-    //   a: ["hello", "world", "!!!"],
-    // }),
+    error: ({
+      type: "object",
+      data: ["This is a server error"],
+      children: {
+        n: leaf([]),
+        s: leaf([]),
+        a: {
+          type: "array",
+          data: [],
+          children: [
+            leaf([]),
+            leaf([
+              "This is a deeper server error",
+              "And another deep server error",
+            ]),
+            leaf([]),
+          ],
+        },
+      },
+    }: Tree<ServerErrors>),
   };
 
   render() {
     return (
       <Form
-        serverErrors={null}
+        serverErrors={this.state.error}
         initialValue={this.state.value}
         feedbackStrategy="Always"
         onSubmit={value => {
@@ -153,7 +156,9 @@ class App extends Component<{}, State> {
                 return (
                   <ul>
                     {flattened.map(e => (
-                      <li>{e}</li>
+                      <li style={{color: "red"}} key={e}>
+                        {e}
+                      </li>
                     ))}
                   </ul>
                 );
