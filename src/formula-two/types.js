@@ -2,9 +2,14 @@
 
 import * as React from "react";
 import type {Tree} from "./Tree";
+import invariant from "./utils/invariant";
 
-// TODO(zach): Maybe this should be an array of strings (or a non-empty array of strings?)
-export type Err = Array<string>;
+type ClientErrors = Array<string> | "pending";
+type ServerErrors = Array<string> | "unchecked";
+export type Err = {
+  client: ClientErrors,
+  server: ServerErrors,
+};
 export type ToError = <T>(T) => Err;
 
 // Every field keeps its own meta, not the meta of its children
@@ -20,22 +25,37 @@ export type MetaForm = {
   submitted: boolean,
 };
 
-export type OnChange<T> = (T, Errors) => void;
-export type OnBlur = () => void;
+export const cleanMeta: MetaField = {
+  touched: false,
+  changed: false,
+  succeeded: false,
+  asyncValidationInFlight: false,
+};
+
+export const cleanErrors: Err = {
+  client: "pending",
+  server: "unchecked",
+};
+
+export type OnChange<T> = T => void;
+export type OnBlur<T> = (
+  ShapedTree<
+    T,
+    {
+      errors: Err,
+      meta: MetaField,
+    }
+  >
+) => void;
 
 interface ValidatingComponent<P, S> extends React.Component<P, S> {
   validate(): Err;
 }
-export type FieldLinkProps<T> = {|
-  value: T,
-  errors: Errors,
-  onChange: OnChange<T>,
-  onBlur: OnBlur,
-|};
 export type FieldLink<T> = {|
-  ...FieldLinkProps<T>,
-  key: React.Key,
-  ref: React.Ref<ValidatingComponent<any, any>>,
+  formState: FormState<T>,
+  onChange: OnChange<FormState<T>>,
+  // not sure whether this or onChange style is better
+  onBlur: OnBlur<T>,
 |};
 
 export type FeedbackStrategy =
@@ -62,10 +82,43 @@ export type ArrayNode<T> = {
   children: Array<Tree<T>>,
 };
 
-// Actually mapping isn't working. Instead do a lot of runtime checks to make
-// sure the shape is right
-export type Errors = Tree<Err>;
-export type ObjErrors = ObjectNode<Err>;
-export type ArrErrors = ArrayNode<Err>;
+export type Validation<T> = T => ClientErrors;
 
-export type Validation<T> = T => Err;
+// Shape is a phantom type used to track the shape of the Tree
+// eslint-disable-next-line no-unused-vars
+export type ShapedTree<Shape, Data> = Tree<Data>;
+
+// invariant, Tree is shaped like T
+export type FormState<T> = [
+  T,
+  ShapedTree<
+    T,
+    {
+      errors: Err,
+      meta: MetaField,
+    }
+  >,
+];
+
+// TODO(zach): Something, something zippers
+export function objectChild<T: {}>(
+  formState: FormState<T>,
+  key: $Keys<T>
+): FormState<*> {
+  invariant(
+    formState[1].type === "object",
+    "Tried to get an object child of a non-object node."
+  );
+  return [formState[0][key], formState[1].children[key]];
+}
+
+export function arrayChild<E>(
+  formState: FormState<Array<E>>,
+  index: number
+): FormState<E> {
+  invariant(
+    formState[1].type === "array",
+    "Tried to get an array child of a non-array node."
+  );
+  return [formState[0][index], formState[1].children[index]];
+}

@@ -2,9 +2,17 @@
 
 import * as React from "react";
 
-import type {FieldLink, Errors, Validation, ObjErrors} from "./types";
-import {setEq} from "./utils/set";
-import type {MetaField} from "./types";
+import type {
+  FieldLink,
+  Validation,
+  OnChange,
+  FormState,
+  Err,
+  OnBlur,
+  MetaField,
+} from "./types";
+import {objectChild} from "./types";
+import {type Tree} from "./Tree";
 import {type FormContextPayload} from "./Form";
 import withFormContext from "./withFormContext";
 import invariant from "./utils/invariant";
@@ -13,10 +21,6 @@ type ToFieldLink = <T>(T) => FieldLink<T>;
 // $FlowFixMe(zach): ???
 type Links<T: {}> = $ObjMap<T, ToFieldLink>;
 
-type ChildError = any;
-type ToChildError = <T>(T) => ChildError;
-type ChildrenErrors<T> = $ObjMap<T, ToChildError>;
-
 type Props<T: {}> = {|
   ...$Exact<FieldLink<T>>,
   formContext: FormContextPayload,
@@ -24,40 +28,48 @@ type Props<T: {}> = {|
   children: (links: Links<T>) => React.Node,
 |};
 
-type State = {
-  meta: MetaField,
-};
-
 function makeLinks<T: {}>(
-  value: T,
-  errors: ObjErrors,
-  onChange: (newValue: T, childrenErrors: ChildrenErrors<T>) => void,
-  onBlur: () => void
+  formState: FormState<T>,
+  onChange: OnChange<FormState<T>>,
+  onChildBlur: (
+    string,
+    Tree<{
+      errors: Err,
+      meta: MetaField,
+    }>
+  ) => void
 ): Links<T> {
-  return Object.keys(value).reduce((memo, k) => {
+  return Object.keys(formState[0]).reduce((memo, k) => {
     const l: FieldLink<*> = {
-      value: value[k],
-      errors: errors.children[k],
-      onChange: (newValue, newErrors) => {
-        onChange(
-          {
-            ...value,
-            [k]: newValue,
-          },
-          {
-            ...errors.children,
-            [k]: newErrors,
-          }
+      formState: objectChild(formState, k),
+      onChange: ([childValue, childTree]) => {
+        const newValue = {...formState[0], [k]: childValue};
+
+        invariant(
+          formState[1].type === "object",
+          "Got a non-object node in ObjectField link onChange()"
         );
+        // TODO(zach): Don't do this manually
+        const newTree = {
+          type: "object",
+          data: formState[1].data,
+          children: {
+            ...formState[1].children,
+            [k]: childTree,
+          },
+        };
+        onChange([newValue, newTree]);
       },
-      onBlur,
+      onBlur: childTree => {
+        onChildBlur(k, childTree);
+      },
     };
     memo[k] = l;
     return memo;
   }, {});
 }
 
-class ObjectField<T: {}> extends React.Component<Props<T>, State> {
+class ObjectField<T: {}> extends React.Component<Props<T>> {
   static defaultProps = {
     validation: () => [],
   };
@@ -65,15 +77,6 @@ class ObjectField<T: {}> extends React.Component<Props<T>, State> {
   constructor(props: Props<T>) {
     super(props);
     this._checkProps(props);
-
-    this.state = {
-      meta: {
-        touched: false,
-        changed: false,
-        succeeded: false,
-        asyncValidationInFlight: false,
-      },
-    };
   }
 
   componentDidUpdate() {
@@ -81,59 +84,76 @@ class ObjectField<T: {}> extends React.Component<Props<T>, State> {
   }
 
   _checkProps(props: Props<T>) {
-    const {errors} = props;
-    if (errors.type !== "object") {
-      throw new Error("Error isn't an object node");
-    }
-
-    const valueKeys = new Set(Object.keys(props.value));
-    const errorKeys = new Set(Object.keys(errors.children));
-
-    if (!setEq(valueKeys, errorKeys)) {
-      throw new Error("Value and error don't have the same keys");
+    const [_, tree] = props.formState;
+    // TODO(zach): This probably isn't necessary if the typechecks work with ShapedTree
+    if (tree.type !== "object") {
+      throw new Error("Tree doesn't have an object root.");
     }
   }
 
   // notes change, runs validation
-  _onChange: (T, ChildrenErrors<T>) => void = (
-    newValue: T,
-    childrenErrors: ChildrenErrors<T>
-  ) => {
-    const error = this.props.validation(newValue);
-    this.setState({
-      meta: {
-        ...this.state.meta,
-        changed: true,
+  _onChange: (FormState<T>) => void = ([newValue, newTree]: FormState<T>) => {
+    const [oldValue, oldTree] = this.props.formState;
+
+    const newMeta = {
+      ...oldTree.data.meta,
+      changed: true,
+    };
+    // When to clear server errors?
+    const clientErrors = this.props.validation(newValue);
+    const newErrors: Err = {
+      client: clientErrors,
+      server: [],
+    };
+
+    invariant(
+      newTree.type === "object",
+      "ObjectField got a non-object tree in _onChange"
+    );
+    this.props.onChange([
+      newValue,
+      {
+        type: "object",
+        data: {
+          errors: newErrors,
+          meta: newMeta,
+        },
+        children: newTree.children,
       },
-    });
-    this.props.onChange(newValue, {
-      type: "object",
-      data: error,
-      children: childrenErrors,
-    });
+    ]);
   };
 
-  _onBlur = () => {
-    this.setState({
-      meta: {
-        ...this.state.meta,
-        touched: true,
+  onChildBlur: (
+    string,
+    Tree<{
+      errors: Err,
+      meta: MetaField,
+    }>
+  ) => void = (key, childTree) => {
+    const [_, tree] = this.props.formState;
+    invariant(
+      tree.type === "object",
+      "Got a non-object node in onChildBlur() of ObjectField"
+    );
+    const newTree = {
+      type: "object",
+      data: {
+        ...tree.data,
+        meta: {
+          ...tree.data.meta,
+          touched: true,
+        },
       },
-    });
-    this.props.onBlur();
+      children: {
+        ...tree.children,
+        [key]: childTree,
+      },
+    };
+    this.props.onBlur(newTree);
   };
 
   render() {
-    invariant(
-      this.props.errors.type === "object",
-      "Errors isn't an object node in ObjectField render()"
-    );
-    const links = makeLinks(
-      this.props.value,
-      this.props.errors,
-      this._onChange,
-      this._onBlur
-    );
+    const links = makeLinks(this.props.formState, this._onChange, this._onBlur);
     return this.props.children(links);
   }
 }

@@ -3,15 +3,17 @@
 import * as React from "react";
 
 import type {
-  Errors,
   FieldLink,
-  FieldLinkProps,
   MetaField,
   Validation,
   ArrayNode,
   Err,
+  OnChange,
+  FormState,
 } from "./types";
-import {removeAt, replaceAt, moveFromTo} from "./utils/array";
+import {arrayChild, cleanErrors, cleanMeta} from "./types";
+import {type Tree} from "./Tree";
+import {removeAt, replaceAt, moveFromTo, insertAt} from "./utils/array";
 import {type FormContextPayload, FormContext} from "./Form";
 import invariant from "./utils/invariant";
 import withFormContext from "./withFormContext";
@@ -19,47 +21,46 @@ import withFormContext from "./withFormContext";
 type ToFieldLink = <T>(T) => FieldLink<T>;
 type Links<E> = Array<$Call<ToFieldLink, E>>;
 
-type ChildrenErrors = Array<Errors>;
-
 type Props<E> = {|
-  ...FieldLinkProps<Array<E>>,
+  ...$Exact<FieldLink<Array<E>>>,
   formContext: FormContextPayload,
   validation: Validation<Array<E>>,
   children: (
     links: Links<E>,
     {
-      addField: (value: E) => void,
+      addField: (index: number, value: E) => void,
       removeField: (index: number) => void,
       moveField: (oldIndex: number, newIndex: number) => void,
     }
   ) => React.Node,
 |};
 
-type State = {
-  meta: MetaField,
-};
-
 function makeLinks<E>(
-  value: Array<E>,
-  errors: Errors,
-  onChange: (newValue: Array<E>, childrenErrors: ChildrenErrors) => void,
-  onBlur: () => void
+  formState: FormState<Array<E>>,
+  onChildChange: (number, FormState<E>) => void,
+  onChildBlur: (
+    number,
+    Tree<{
+      errors: Err,
+      meta: MetaField,
+    }>
+  ) => void
 ): Links<E> {
-  const e = errors;
-  invariant(e.type === "array", "Errors is not an array node");
-  return value.map((x, i) => ({
-    value: x,
-    errors: e.children[i],
-    onChange: (newValue: E, newErrors: Errors) => {
-      const nextValue = replaceAt(i, newValue, value);
-      const nextChildrenErrors = replaceAt(i, newErrors, e.children);
-      onChange(nextValue, nextChildrenErrors);
-    },
-    onBlur,
-  }));
+  const [oldValue, oldTree] = formState;
+  return oldValue.map((x, i) => {
+    return {
+      formState: arrayChild(formState, i),
+      onChange: childFormState => {
+        onChildChange(i, childFormState);
+      },
+      onBlur: childTree => {
+        onChildBlur(i, childTree);
+      },
+    };
+  });
 }
 
-class ArrayField<E> extends React.Component<Props<E>, State> {
+class ArrayField<E> extends React.Component<Props<E>> {
   static defaultProps = {
     validation: () => [],
   };
@@ -67,25 +68,16 @@ class ArrayField<E> extends React.Component<Props<E>, State> {
   constructor(props: Props<E>) {
     super(props);
     this._checkProps(props);
-
-    this.state = {
-      meta: {
-        touched: false,
-        changed: false,
-        succeeded: false,
-        asyncValidationInFlight: false,
-      },
-    };
   }
 
   _checkProps(props: Props<E>) {
-    const {errors} = props;
-    if (errors.type !== "array") {
-      throw new Error("Error isn't an array node");
+    const [value, tree] = props.formState;
+    // TODO(zach): This probably isn't necessary if the typechecks work with ShapedTree
+    if (tree.type !== "array") {
+      throw new Error("Tree doesn't have an object root.");
     }
-
-    if (props.value.length !== errors.children.length) {
-      throw new Error("Value doesn't have the same length as errors");
+    if (tree.children.length !== value.length) {
+      throw new Error("Tree has the wrong number of children");
     }
   }
 
@@ -93,45 +85,79 @@ class ArrayField<E> extends React.Component<Props<E>, State> {
     this._checkProps(this.props);
   }
 
-  _onChildrenChange: (Array<E>, ChildrenErrors) => void = (
-    newValue,
-    childrenErrors
+  onChildChange: (number, FormState<E>) => void = (
+    index: number,
+    [childValue, childTree]: FormState<E>
   ) => {
-    const error = this.props.validation(newValue);
-    this._onChange(newValue, {
-      type: "array",
-      data: error,
-      children: childrenErrors,
-    });
-  };
+    const [oldValue, oldTree] = this.props.formState;
 
-  _onChange: (Array<E>, Errors) => void = (newValue, errors) => {
-    this.setState({
-      meta: {
-        ...this.state.meta,
-        changed: true,
-      },
-    });
-    this.props.onChange(newValue, errors);
-  };
-
-  _onBlur = () => {
-    this.setState({
-      meta: {
-        ...this.state.meta,
-        touched: true,
-      },
-    });
-    this.props.onBlur();
-  };
-
-  validate(): ArrayNode<Err> {
-    // TODO
-    return {
-      type: "array",
-      data: [],
-      children: [],
+    const newMeta = {
+      ...oldTree.data.meta,
+      changed: true,
     };
+    const newValue = replaceAt(index, childValue, oldValue);
+
+    invariant(
+      oldTree.type === "array",
+      "Got a non-array node in ArrayField's onChildChange"
+    );
+    const newTree = {
+      type: "array",
+      data: {
+        ...oldTree.data,
+        meta: newMeta,
+      },
+      children: replaceAt(index, childTree, oldTree.children),
+    };
+
+    this.props.onChange([newValue, newTree]);
+  };
+
+  onChildBlur: (
+    number,
+    Tree<{
+      errors: Err,
+      meta: MetaField,
+    }>
+  ) => void = (index, childTree) => {
+    const [_, tree] = this.props.formState;
+    invariant(
+      tree.type === "array",
+      "ArrayField got a non-array tree in onChildBlur"
+    );
+    const newTree = {
+      type: "object",
+      data: {
+        ...tree.data,
+        meta: {
+          ...tree.data.meta,
+          touched: true,
+        },
+      },
+      children: replaceAt(index, childTree, tree.children),
+    };
+    this.props.onBlur(newTree);
+  };
+
+  addChildField: (number, E) => void = (index: number, childValue: E) => {
+    const [oldValue, oldTree] = this.props.formState;
+    const newTODO = {
+      errors: cleanErrors,
+      meta: cleanMeta,
+    };
+
+    const newValue = insertAt(index, childValue, oldValue);
+    const newTree = {
+      type: "array",
+      data: {
+        ...oldTree.data,
+        meta: {
+          ...oldTree.data.meta,
+          touched: true,
+        },
+      },
+      children: insertAt(index, newTODO);
+    }
   }
 
   render() {
