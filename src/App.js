@@ -1,22 +1,16 @@
 // @flow strict
-import React, {Component} from "react";
+import React, { Component } from "react";
 
-import Form from "./formula-two/Form";
-import ObjectField from "./formula-two/ObjectField";
-import ArrayField from "./formula-two/ArrayField";
-import Errors from "./formula-two/Errors";
-import {type Tree, leaf} from "./formula-two/tree";
-import {type ServerErrors} from "./formula-two/types";
+import {
+  Form,
+  ObjectField,
+  ArrayField,
+  ErrorsHelper,
+  makeField
+} from "formula-one";
 
 import NumberInput from "./inputs/NumberInput";
 import StringInput from "./inputs/StringInput";
-import makeField from "./formula-two/makeField";
-
-// XXX(zach): Librarification (exports)
-// XXX(zach): Tests
-// XXX(zach): Async validations
-// XXX(zach): <Field> typing mystery
-// XXX(zach): rename onFoo to handleFoo in some places
 
 const NumberField = makeField(NumberInput);
 const StringField = makeField(StringInput);
@@ -35,9 +29,9 @@ type State = {
   value: {|
     n: number,
     s: string,
-    a: Array<string>,
+    a: Array<string>
   |},
-  error: Tree<ServerErrors>,
+  error: null | { [path: string]: Array<string> }
 };
 
 class App extends Component<{}, State> {
@@ -45,53 +39,29 @@ class App extends Component<{}, State> {
     value: {
       n: 232,
       s: "",
-      a: ["hello", "world", "!!!"],
+      a: ["hello", "world", "!!!"]
     },
     error: {
-      type: "object",
-      data: ["This is a server error"],
-      children: {
-        n: leaf([]),
-        s: leaf([]),
-        a: {
-          type: "array",
-          data: [],
-          children: [
-            leaf([]),
-            leaf([
-              "This is a deeper server error",
-              "And another deep server error",
-            ]),
-            leaf([]),
-          ],
-        },
-      },
-    },
+      "/": ["This is a server error"],
+      "/a/1": ["This is a deeper server error", "And another deep server error"]
+    }
   };
 
   resetServerErrors = () => {
-    this.setState({error: null});
+    this.setState({ error: null });
   };
 
   changeServerErrors = () => {
     this.setState({
       error: {
-        type: "object",
-        data: ["Zach is the best"],
-        children: {
-          n: leaf([]),
-          s: leaf([]),
-          a: {
-            type: "array",
-            data: [],
-            children: [
-              leaf(["Zach is the best", "Zach is the best"]),
-              leaf(["Zach is the best"]),
-              leaf([]),
-            ],
-          },
-        },
-      },
+        "/": ["A different root error"],
+        "/n": ["An error on the number"],
+        "/a/0": [
+          "One error on an array element",
+          "Another error on an array element"
+        ],
+        "/a/1": ["An error on a different array element"]
+      }
     });
   };
 
@@ -135,7 +105,7 @@ class App extends Component<{}, State> {
                       <label>
                         Array
                         <ArrayField link={links.a}>
-                          {(links, {addField, removeField, moveField}) => (
+                          {(links, { addField, removeField, moveField }) => (
                             <React.Fragment>
                               {links.map((link, i) => (
                                 <div key={i}>
@@ -179,22 +149,22 @@ class App extends Component<{}, State> {
             <button onClick={this.changeServerErrors}>
               Different server errors
             </button>
-            <Errors link={link}>
-              {({shouldShowErrors, flattened}) => {
+            <ErrorsHelper link={link}>
+              {({ shouldShowErrors, flattened }) => {
                 if (!shouldShowErrors) {
                   return null;
                 }
                 return (
                   <ul>
                     {flattened.map(e => (
-                      <li style={{color: "red"}} key={e}>
+                      <li style={{ color: "red" }} key={e}>
                         {e}
                       </li>
                     ))}
                   </ul>
                 );
               }}
-            </Errors>
+            </ErrorsHelper>
           </React.Fragment>
         )}
       </Form>
