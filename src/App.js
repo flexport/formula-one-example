@@ -6,14 +6,47 @@ import {
   ObjectField,
   ArrayField,
   ErrorsHelper,
-  makeField
+  Field
 } from "formula-one";
 
 import NumberInput from "./inputs/NumberInput";
 import StringInput from "./inputs/StringInput";
 
-const NumberField = makeField(NumberInput);
-const StringField = makeField(StringInput);
+function NumberField({ link, validation }) {
+  return (
+    <Field link={link} validation={validation}>
+      {(value, errors, onChange, onBlur) => (
+        <NumberInput
+          value={value}
+          errors={errors}
+          onChange={onChange}
+          onBlur={onBlur}
+        />
+      )}
+    </Field>
+  );
+}
+NumberField.defaultProps = {
+  validation: () => []
+};
+
+function StringField({ link, validation }) {
+  return (
+    <Field link={link} validation={validation}>
+      {(value, errors, onChange, onBlur) => (
+        <StringInput
+          value={value}
+          errors={errors}
+          onChange={onChange}
+          onBlur={onBlur}
+        />
+      )}
+    </Field>
+  );
+}
+StringField.defaultProps = {
+  validation: () => []
+};
 
 function checkString(s: string): Array<string> {
   if (s === "") {
