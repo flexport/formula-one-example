@@ -6,7 +6,8 @@ import {
   ObjectField,
   ArrayField,
   ErrorsHelper,
-  Field
+  Field,
+  FeedbackStrategies
 } from "formula-one";
 
 import NumberInput from "./inputs/NumberInput";
@@ -103,7 +104,7 @@ class App extends Component<{}, State> {
       <Form
         serverErrors={this.state.error}
         initialValue={this.state.value}
-        feedbackStrategy="Always"
+        feedbackStrategy={FeedbackStrategies.Always}
         onSubmit={value => {
           console.log("SUBMITTED", value);
         }}

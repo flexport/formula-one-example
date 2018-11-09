@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "flow-bin": "^0.78.0",
-    "formula-one": "^0.2.0",
+    "formula-one": "^0.6.3",
     "husky": "^0.14.3",
     "lint-staged": "^7.2.0",
     "prettier": "^1.14.0",

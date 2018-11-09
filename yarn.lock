@@ -3333,10 +3333,10 @@ form-data@~2.3.1:
     combined-stream "1.0.6"
     mime-types "^2.1.12"
 
-formula-one@^0.2.0:
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/formula-one/-/formula-one-0.2.0.tgz#ed460efaf4507e3b9edffbe6cb29ccb413985f54"
-  integrity sha512-JvZEQcJc3VZZQpMr12FhJtQFsMVNOLc2p+Fqeu2Puxib35RSLdt2X6B6bkNrUYWK/F82NawcPauHogBOLBHAIg==
+formula-one@^0.6.3:
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/formula-one/-/formula-one-0.6.3.tgz#4aefa13420f4258979cc13cdda91f21812760d90"
+  integrity sha512-IHfko2YEeBmcl+KyAYbCtfBN1CwAiXNHXi3uHJgPzj/PFmGhKVwXhKvmYBFZtZvcbPZ53WtAR43pZqvBI2yPXw==
 
 forwarded@~0.1.2:
   version "0.1.2"
