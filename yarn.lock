@@ -3290,10 +3290,10 @@ flatten@^1.0.2:
   resolved "https://registry.yarnpkg.com/flatten/-/flatten-1.0.2.tgz#dae46a9d78fbe25292258cc1e780a41d95c03782"
   integrity sha1-2uRqnXj74lKSJYzB54CkHZXAN4I=
 
-flow-bin@^0.78.0:
-  version "0.78.0"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.78.0.tgz#df9fe7f9c9a2dfaff39083949fe2d831b41627b7"
-  integrity sha512-LV55tE+ItkC9HQAbEK+VxpBe54Ryp/dj4q9KmqDIfhV7mtP+hbvc/1AUf/AaWFIve3eURO0cxoGN4ZQQ3o2HTg==
+flow-bin@^0.87.0:
+  version "0.87.0"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.87.0.tgz#fab7f984d8cc767e93fa9eb01cf7d57ed744f19d"
+  integrity sha512-mnvBXXZkUp4y6A96bR5BHa3q1ioIIN2L10w5osxJqagAakTXFYZwjl0t9cT3y2aCEf1wnK6n91xgYypQS/Dqbw==
 
 follow-redirects@^1.0.0:
   version "1.5.2"
@@ -3333,10 +3333,10 @@ form-data@~2.3.1:
     combined-stream "1.0.6"
     mime-types "^2.1.12"
 
-formula-one@^0.6.3:
-  version "0.6.3"
-  resolved "https://registry.yarnpkg.com/formula-one/-/formula-one-0.6.3.tgz#4aefa13420f4258979cc13cdda91f21812760d90"
-  integrity sha512-IHfko2YEeBmcl+KyAYbCtfBN1CwAiXNHXi3uHJgPzj/PFmGhKVwXhKvmYBFZtZvcbPZ53WtAR43pZqvBI2yPXw==
+formula-one@0.9.0-alpha.1:
+  version "0.9.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/formula-one/-/formula-one-0.9.0-alpha.1.tgz#a0b7f867886843a9efa4b77612f49ec862c31d70"
+  integrity sha512-hC0H7HF8StIRIq0/7PE12FML0iGPTPc/rQT3ZDTzU5BIIA7onC+9ryudiLgG1MwO4j138bf68+sioS3tsZm50w==
 
 forwarded@~0.1.2:
   version "0.1.2"
